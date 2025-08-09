@@ -14,6 +14,7 @@ RUN npm ci --only=production
 COPY cli.js ./
 COPY LICENSE ./
 COPY README.md ./
+COPY static/ ./static/
 
 # Create a non-root user
 RUN addgroup -g 1001 -S lowkey && \

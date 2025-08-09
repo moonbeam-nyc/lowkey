@@ -34,6 +34,7 @@
   "files": [
     "cli.js",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "static/"
   ]
 }
