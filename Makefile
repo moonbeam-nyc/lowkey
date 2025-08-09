@@ -114,3 +114,16 @@ version-minor: ## Bump minor version
 .PHONY: version-major
 version-major: ## Bump major version
 	npm run version:major
+
+# Package publish commands (version + publish)
+.PHONY: publish-patch
+publish-patch: ## Bump patch version and publish to npm
+	npm run publish:patch
+
+.PHONY: publish-minor
+publish-minor: ## Bump minor version and publish to npm
+	npm run publish:minor
+
+.PHONY: publish-major
+publish-major: ## Bump major version and publish to npm
+	npm run publish:major
