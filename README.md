@@ -12,8 +12,8 @@ Sync secrets from various secret stores to different output formats with ease.
 
 ```bash
 lowkey \
-  --source-type aws-secrets-manager \
-  --source-name team-dev-secrets \
+  --input-type aws-secrets-manager \
+  --input-name team-dev-secrets \
   --output-type env \
   --output-name .env.dev
 ```
@@ -37,73 +37,85 @@ docker pull ghcr.io/moonbeam-nyc/lowkey:v1.1.0
 ## Usage
 
 ```bash
-lowkey --source-name <name|arn> [options]
+lowkey --input-type <type> --input-name <name|path> --output-type <type> [options]
 ```
 
 ### Options
 
-- `--source-type <type>` - Secret store type (default: `aws-secrets-manager`)
-- `--source-name <name>` - Secret name or ARN (required)
-- `--region <region>` - AWS region (required for aws-secrets-manager)
-- `--output-type <type>` - Output format: `env`, `json` (default: `env`)
-- `--output-name <file>` - Output file path (default: `.env`)
-- `--append` - Append to existing file instead of overwriting
+- `--input-type <type>` - Input source type (required)
+- `--input-name <name>` - Input source name/path (required)
+- `--region <region>` - AWS region (or use AWS_REGION environment variable)
+- `--output-type <type>` - Output format (required)
+- `--output-name <file>` - Output file path (default: stdout)
 - `--stage <stage>` - Secret version stage (default: `AWSCURRENT`)
+- `-y, --yes` - Auto-confirm prompts (e.g., secret creation)
+- `--version, -v` - Show version number
 - `--help, -h` - Show help message
 
-### Supported Source Types
+### Supported Input Types
 
 - `aws-secrets-manager` - AWS Secrets Manager
+- `json` - JSON file
+- `env` - Environment file (.env format)
 
 ### Supported Output Types
 
-- `env` - Environment file (.env format)
+- `aws-secrets-manager` - AWS Secrets Manager
 - `json` - JSON file
+- `env` - Environment file (.env format)
 
 ### Examples
 
 #### CLI Usage
 ```bash
-# Basic usage - AWS Secrets Manager to stdout
-lowkey --source-name my-app-secrets --region us-east-1
+# AWS Secrets Manager to stdout
+lowkey --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
 
-# Using ARN and custom output file
-lowkey --source-name arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-AbCdEf --region us-east-1 --output-name .env.local
+# AWS Secrets Manager to env file
+lowkey --input-type aws-secrets-manager --input-name my-secrets --output-type env --output-name .env
 
-# Output to JSON format
-lowkey --source-name my-secrets --region us-west-2 --output-type json
+# AWS to JSON format
+lowkey --input-type aws-secrets-manager --input-name my-secrets --output-type json --output-name config.json
 
-# Save to file
-lowkey --source-name my-secrets --region us-east-1 --output-name .env
+# JSON file to env file
+lowkey --input-type json --input-name config.json --output-type env --output-name .env
 
-# Using environment variables for region
-AWS_REGION=us-east-1 lowkey --source-name my-secrets
+# Env file to JSON
+lowkey --input-type env --input-name .env --output-type json
+
+# Convert between formats
+lowkey --input-type env --input-name .env.prod --output-type env --output-name .env.local
+
+# Upload to AWS Secrets Manager
+lowkey --input-type json --input-name config.json --output-type aws-secrets-manager --output-name my-uploaded-secret
+
+# Auto-create secret if it doesn't exist
+lowkey --input-type env --input-name .env --output-type aws-secrets-manager --output-name new-secret -y
 ```
 
 #### Docker Usage
 ```bash
-# Basic usage with Docker - output to stdout
+# AWS Secrets Manager to stdout
 docker run --rm \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_REGION=us-east-1 \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  --source-name my-app-secrets
+  --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
 
 # Using AWS profile with volume mount
 docker run --rm \
   -v ~/.aws:/home/lowkey/.aws:ro \
   -e AWS_PROFILE=production \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  --source-name my-secrets
+  --input-type aws-secrets-manager --input-name my-secrets --output-type env
 
-# Save to local file using volume mount
+# Convert local files with volume mount
 docker run --rm \
-  -v ~/.aws:/home/lowkey/.aws:ro \
   -v $(pwd):/workspace \
-  -e AWS_PROFILE=production \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  --source-name my-secrets --output-name /workspace/.env
+  --input-type json --input-name /workspace/config.json \
+  --output-type env --output-name /workspace/.env
 
 # Output to local file via redirection
 docker run --rm \
@@ -111,7 +123,7 @@ docker run --rm \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_REGION=us-east-1 \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  --source-name my-secrets > .env
+  --input-type aws-secrets-manager --input-name my-secrets --output-type env > .env
 ```
 
 ## Local Development
@@ -135,7 +147,7 @@ make run-help
 make run-version
 
 # Example usage with AWS credentials
-make run-aws ARGS="--source-name my-secret --region us-east-1"
+make run-aws ARGS="--input-type aws-secrets-manager --input-name my-secret --output-type env"
 
 # Clean up local images
 make clean
