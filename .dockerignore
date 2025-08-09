@@ -4,7 +4,6 @@ npm-debug.log
 .nyc_output
 .git
 .gitignore
-README.md
 .env*
 !.env.example
 .DS_Store
