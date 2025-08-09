@@ -1,6 +1,6 @@
 {
   "name": "@moonbeam-nyc/lowkey",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Sync secrets from local to cloud, and vice versa",
   "main": "cli.js",
   "bin": {
