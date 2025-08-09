@@ -4,8 +4,18 @@ Sync secrets from various secret stores to different output formats with ease.
 
 ## Installation
 
+### npm
 ```bash
 npm install -g @moonbeam-nyc/lowkey
+```
+
+### Docker
+```bash
+# Pull from GitHub Container Registry
+docker pull ghcr.io/moonbeam-nyc/lowkey:latest
+
+# Or use a specific version
+docker pull ghcr.io/moonbeam-nyc/lowkey:v1.1.0
 ```
 
 ## Usage
@@ -36,27 +46,104 @@ lowkey --source-name <name|arn> [options]
 
 ### Examples
 
+#### CLI Usage
 ```bash
-# Basic usage - AWS Secrets Manager to .env file
+# Basic usage - AWS Secrets Manager to stdout
 lowkey --source-name my-app-secrets --region us-east-1
 
 # Using ARN and custom output file
 lowkey --source-name arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-AbCdEf --region us-east-1 --output-name .env.local
 
 # Output to JSON format
-lowkey --source-name my-secrets --region us-west-2 --output-type json --output-name secrets.json
+lowkey --source-name my-secrets --region us-west-2 --output-type json
 
-# Append to existing file using pending version
-lowkey --source-name my-secrets --region us-east-1 --append --stage AWSPENDING
+# Save to file
+lowkey --source-name my-secrets --region us-east-1 --output-name .env
 
-# Explicit source type specification
-lowkey --source-type aws-secrets-manager --source-name my-secrets --region us-east-1
+# Using environment variables for region
+AWS_REGION=us-east-1 lowkey --source-name my-secrets
+```
+
+#### Docker Usage
+```bash
+# Basic usage with Docker - output to stdout
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_REGION=us-east-1 \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  --source-name my-app-secrets
+
+# Using AWS profile with volume mount
+docker run --rm \
+  -v ~/.aws:/home/lowkey/.aws:ro \
+  -e AWS_PROFILE=production \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  --source-name my-secrets
+
+# Save to local file using volume mount
+docker run --rm \
+  -v ~/.aws:/home/lowkey/.aws:ro \
+  -v $(pwd):/workspace \
+  -e AWS_PROFILE=production \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  --source-name my-secrets --output-name /workspace/.env
+
+# Output to local file via redirection
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_REGION=us-east-1 \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  --source-name my-secrets > .env
+```
+
+## Local Development
+
+### Building and Testing with Make
+
+```bash
+# Show all available commands
+make help
+
+# Build Docker image locally
+make build
+
+# Test the build works
+make test-build
+
+# Run container and show help
+make run-help
+
+# Run container and show version
+make run-version
+
+# Example usage with AWS credentials
+make run-aws ARGS="--source-name my-secret --region us-east-1"
+
+# Clean up local images
+make clean
+```
+
+### Development Commands
+
+```bash
+# Install dependencies locally
+make dev-install
+
+# Link for global CLI usage
+make dev-link
+
+# Version bumping
+make version-patch   # 1.1.0 -> 1.1.1
+make version-minor   # 1.1.0 -> 1.2.0
+make version-major   # 1.1.0 -> 2.0.0
 ```
 
 ## Requirements
 
 - Node.js >= 16
-- AWS credentials configured (compatible with aws-vault) for AWS Secrets Manager
+- AWS credentials configured for AWS Secrets Manager
 - Secret stored as JSON object in the secret store
 
 ## How it works
