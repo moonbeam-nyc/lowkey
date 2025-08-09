@@ -68,29 +68,27 @@ lowkey --input-type <type> --input-name <name|path> --output-type <type> [option
 
 #### CLI Usage
 ```bash
-# AWS Secrets Manager to stdout
-lowkey --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
-
 # AWS Secrets Manager to env file
-lowkey --input-type aws-secrets-manager --input-name my-secrets --output-type env --output-name .env
+lowkey \
+  --input-type aws-secrets-manager \
+  --input-name my-secrets \
+  --output-type env \
+  --output-name .env
 
-# AWS to JSON format
-lowkey --input-type aws-secrets-manager --input-name my-secrets --output-type json --output-name config.json
+# Convert JSON to env format
+lowkey \
+  --input-type json \
+  --input-name config.json \
+  --output-type env \
+  --output-name .env
 
-# JSON file to env file
-lowkey --input-type json --input-name config.json --output-type env --output-name .env
-
-# Env file to JSON
-lowkey --input-type env --input-name .env --output-type json
-
-# Convert between formats
-lowkey --input-type env --input-name .env.prod --output-type env --output-name .env.local
-
-# Upload to AWS Secrets Manager
-lowkey --input-type json --input-name config.json --output-type aws-secrets-manager --output-name my-uploaded-secret
-
-# Auto-create secret if it doesn't exist
-lowkey --input-type env --input-name .env --output-type aws-secrets-manager --output-name new-secret -y
+# Upload to AWS Secrets Manager (auto-create if needed)
+lowkey \
+  --input-type env \
+  --input-name .env \
+  --output-type aws-secrets-manager \
+  --output-name new-secret \
+  --yes
 ```
 
 #### Docker Usage
