@@ -11,7 +11,11 @@ Sync secrets from various secret stores to different output formats with ease.
 **Dev team environment sharing:** Quickly sync your team's shared secrets from AWS Secrets Manager to local `.env` files, ensuring everyone has the same environment variables without manually copying credentials.
 
 ```bash
-lowkey --source-name team-dev-secrets --region us-east-1 --output-name .env
+lowkey \
+  --source-type aws-secrets-manager \
+  --source-name team-dev-secrets \
+  --output-type env \
+  --output-name .env.dev
 ```
 
 ## Installation
