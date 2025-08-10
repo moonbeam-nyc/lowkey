@@ -813,8 +813,10 @@ async function handleListCommand(options) {
 
 async function handleInteractiveCommand(options) {
   try {
+    console.log(colorize(`DEBUG: Starting handleInteractiveCommand`, 'yellow'));
     // Start the interactive flow immediately
     const interactiveOptions = await runInteractiveInspect(options);
+    console.log(colorize(`DEBUG: Got interactive options - type: ${interactiveOptions?.type}, name: ${interactiveOptions?.name}`, 'yellow'));
     
     console.error(colorize(`Inspecting ${interactiveOptions.type} secret: '${interactiveOptions.name}'...`, 'gray'));
     
@@ -845,12 +847,18 @@ async function handleInteractiveCommand(options) {
       console.log(colorize(`Found ${keys.length} key(s):`, 'green'));
       
       // Use interactive key browser
-      const breadcrumbs = [`type: ${interactiveOptions.type}`, `name: ${interactiveOptions.name}`];
+      const breadcrumbs = [` ${interactiveOptions.type}`, `${interactiveOptions.name}`];
       const result = await interactiveKeyBrowser(secretData, interactiveOptions.showValues, breadcrumbs);
       
       if (result === 'BACK') {
-        // Go back to secret selection - restart the whole flow
-        return await handleInteractiveCommand(options);
+        // Go back to secret selection for this type
+        console.log(colorize(`DEBUG: Going back to secret selection for type: ${interactiveOptions.type}`, 'yellow'));
+        const secretOptions = { 
+          ...options, 
+          type: interactiveOptions.type,
+          startStep: 'secret' // Start from secret selection instead of type selection
+        };
+        return await handleInteractiveCommand(secretOptions);
       }
       
     } catch (error) {
@@ -919,116 +927,88 @@ async function fuzzyPrompt(question, choices, displayFn = null, breadcrumbs = []
     
     function doRender() {
       try {
-        // Move cursor to top 
-        process.stdout.write('\x1b[H');
-      
-      let currentLine = 0;
-      
-      // Show breadcrumbs if available
-      if (safeBreadcrumbs.length > 0) {
-        const breadcrumbText = safeBreadcrumbs.join(' > ');
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(colorize(`📍 ${breadcrumbText}`, 'gray'));
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log('');
-        currentLine += 2;
-      }
-      
-      process.stdout.write('\x1b[K'); // Clear line
-      console.log(colorize(question, 'cyan'));
-      
-      if (searchMode || query.length > 0) {
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(`Search: ${colorize(query, 'bright')}`);
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log('');
-        currentLine += 3;
-      } else {
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log('');
-        currentLine += 2;
-      }
-      
-      filteredChoices = fuzzySearch(query, choices);
-      
-      if (filteredChoices.length === 0) {
-        if (choices.length === 0 && errorMessage) {
-          // Show error message for empty choices
-          process.stdout.write('\x1b[K'); // Clear line
-          console.log(colorize('(No items available)', 'yellow'));
+        // Clear entire screen and move cursor to top
+        process.stdout.write('\x1b[2J\x1b[H');
+        
+        let output = [];
+        
+        // Always show breadcrumb header
+        if (safeBreadcrumbs.length > 0) {
+          const breadcrumbText = safeBreadcrumbs.join(' > ');
+          output.push(colorize(`📍 ${breadcrumbText}`, 'gray'));
         } else {
-          // Show no matches found for search query
-          process.stdout.write('\x1b[K'); // Clear line
-          console.log(colorize('No matches found', 'yellow'));
+          output.push(colorize(`📍 `, 'gray'));
         }
-        currentLine += 1;
-        // Clear remaining lines and store count
-        process.stdout.write('\x1b[J');
-        lastRenderedLines = currentLine;
-        return;
-      }
-      
-      // Keep selected index within bounds
-      selectedIndex = Math.min(selectedIndex, filteredChoices.length - 1);
-      selectedIndex = Math.max(selectedIndex, 0);
-      
-      // Calculate available height for choices
-      const terminalHeight = process.stdout.rows || 24;
-      const breadcrumbLines = safeBreadcrumbs.length > 0 ? 2 : 0; // breadcrumb + empty line
-      const searchLines = (searchMode || query.length > 0) ? 3 : 2; // Question + Search + empty line OR Question + empty line
-      const errorLines = errorMessage ? 2 : 0; // Error message if provided
-      const headerLines = searchLines + breadcrumbLines; // Variable based on search mode + breadcrumbs
-      const footerLines = 4 + errorLines; // possible "more items" + instructions + error message + empty line + buffer
-      const availableHeight = Math.max(3, terminalHeight - headerLines - footerLines);
-      
-      // Center the selection in the available view
-      const halfHeight = Math.floor(availableHeight / 2);
-      const startIndex = Math.max(0, selectedIndex - halfHeight);
-      const endIndex = Math.min(filteredChoices.length, startIndex + availableHeight);
-      
-      for (let i = startIndex; i < endIndex; i++) {
-        const choice = filteredChoices[i];
-        const display = displayFn ? displayFn(choice) : (typeof choice === 'string' ? choice : choice.Name || choice);
-        const isSelected = i === selectedIndex && !searchMode;
-        const prefix = isSelected ? colorize('> ', 'green') : '  ';
-        const color = isSelected ? 'bright' : 'reset';
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(`${prefix}${colorize(display, color)}`);
-        currentLine += 1;
-      }
-      
-      if (filteredChoices.length > availableHeight) {
-        const showing = endIndex - startIndex;
-        const remaining = filteredChoices.length - showing;
-        if (remaining > 0) {
-          process.stdout.write('\x1b[K'); // Clear line
-          console.log(colorize(`\n... ${remaining} more items`, 'gray'));
-          currentLine += 2;
-        }
-      }
-      
-        // Show error message if provided
-        if (errorMessage) {
-          process.stdout.write('\x1b[K'); // Clear line
-          console.log(''); // Empty line
-          process.stdout.write('\x1b[K'); // Clear line
-          console.log(colorize(`⚠️  ${errorMessage}`, 'red'));
-          currentLine += 2;
+        output.push('');
+        
+        // Question
+        output.push(colorize(question, 'cyan'));
+        
+        // Search field (only if in search mode or has query)
+        if (searchMode || query.length > 0) {
+          output.push(`Search: ${colorize(query, 'bright')}`);
         }
         
+        output.push('');
+        
+        filteredChoices = fuzzySearch(query, choices);
+        
+        if (filteredChoices.length === 0) {
+          if (choices.length === 0 && errorMessage) {
+            output.push(colorize('(No items available)', 'yellow'));
+          } else {
+            output.push(colorize('No matches found', 'yellow'));
+          }
+        } else {
+          // Keep selected index within bounds
+          selectedIndex = Math.min(selectedIndex, filteredChoices.length - 1);
+          selectedIndex = Math.max(selectedIndex, 0);
+          
+          // Calculate available height for choices
+          const terminalHeight = process.stdout.rows || 24;
+          const usedLines = output.length + 6; // current output + error + instructions + buffer
+          const availableHeight = Math.max(3, terminalHeight - usedLines);
+          
+          // Center the selection in the available view
+          const halfHeight = Math.floor(availableHeight / 2);
+          const startIndex = Math.max(0, selectedIndex - halfHeight);
+          const endIndex = Math.min(filteredChoices.length, startIndex + availableHeight);
+          
+          for (let i = startIndex; i < endIndex; i++) {
+            const choice = filteredChoices[i];
+            const display = displayFn ? displayFn(choice) : (typeof choice === 'string' ? choice : choice.Name || choice);
+            const isSelected = i === selectedIndex && !searchMode;
+            const prefix = isSelected ? colorize('> ', 'green') : '  ';
+            const color = isSelected ? 'bright' : 'reset';
+            output.push(`${prefix}${colorize(display, color)}`);
+          }
+          
+          if (filteredChoices.length > availableHeight) {
+            const showing = endIndex - startIndex;
+            const remaining = filteredChoices.length - showing;
+            if (remaining > 0) {
+              output.push(colorize(`... ${remaining} more items`, 'gray'));
+            }
+          }
+        }
+        
+        // Show error message if provided
+        if (errorMessage) {
+          output.push('');
+          output.push(colorize(`⚠️  ${errorMessage}`, 'red'));
+        }
+        
+        // Instructions
+        output.push('');
         const escapeText = safeBreadcrumbs.length > 0 ? 'Esc to go back, ' : '';
         const instructions = safeBreadcrumbs.length > 0 
           ? `Use ↑↓/jk to navigate, / or type to search, Enter to select, ${escapeText}Ctrl+C to cancel`
           : `Use ↑↓/jk to navigate, / or type to search, Enter to select, Ctrl+C to exit`;
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(''); // Empty line
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(colorize(instructions, 'gray'));
-        currentLine += 2;
+        output.push(colorize(instructions, 'gray'));
         
-        // Clear any remaining lines from previous render
-        process.stdout.write('\x1b[J');
-        lastRenderedLines = currentLine;
+        // Write everything at once
+        console.log(output.join('\n'));
+        
       } catch (error) {
         console.error(colorize(`Render error: ${error.message}`, 'red'));
       }
@@ -1071,15 +1051,21 @@ async function fuzzyPrompt(question, choices, displayFn = null, breadcrumbs = []
           // At top level with no search, ignore escape key - do nothing
         }
       } else if (keyStr === '\r' || keyStr === '\n') { // Enter
-        if (filteredChoices.length === 0) {
-          // Can't select from empty list, ignore enter
-          return;
+        if (searchMode) {
+          // Exit search mode (preserve search text)
+          searchMode = false;
+          render(true);
+        } else {
+          if (filteredChoices.length === 0) {
+            // Can't select from empty list, ignore enter
+            return;
+          }
+          process.stdin.setRawMode(false);
+          process.stdin.pause();
+          process.stdin.removeAllListeners('data');
+          rl.close();
+          resolve(filteredChoices[selectedIndex]);
         }
-        process.stdin.setRawMode(false);
-        process.stdin.pause();
-        process.stdin.removeAllListeners('data');
-        rl.close();
-        resolve(filteredChoices[selectedIndex]);
       } else if (keyStr === '\u001b[A' || keyStr === 'k') { // Up arrow or k
         selectedIndex = Math.max(0, selectedIndex - 1);
         render(true); // Immediate for navigation
@@ -1151,8 +1137,9 @@ async function confirmPrompt(question, defaultValue = false) {
 
 async function runInteractiveInspect(options) {
   try {
-    let currentStep = 'type';
-    let selectedType = null;
+    console.log(colorize(`DEBUG: Starting runInteractiveInspect with step: ${options.startStep || 'type'}, type: ${options.type}`, 'yellow'));
+    let currentStep = options.startStep || 'type';
+    let selectedType = options.type ? { name: options.type } : null;
     let selectedSecret = null;
     let typeErrorMessage = null;
     
@@ -1171,7 +1158,7 @@ async function runInteractiveInspect(options) {
         'Select secret type:',
         types,
         (type) => `${type.name} - ${type.description}`,
-        [], // Empty breadcrumbs = no escape allowed
+        [], // Empty breadcrumbs at top-level = no escape allowed
         typeErrorMessage
       );
       
@@ -1218,8 +1205,41 @@ async function runInteractiveInspect(options) {
       }
       
     } else if (currentStep === 'secret') {
-      // Use pre-fetched choices from type selection
-      const choices = selectedSecret.choices;
+      // Get available secrets/files for the selected type (or use pre-fetched if available)
+      let choices = selectedSecret && selectedSecret.choices ? selectedSecret.choices : [];
+      
+      if (choices.length === 0) {
+        // Need to fetch choices
+        try {
+          console.log(colorize(`\nFetching ${selectedType.name} secrets...`, 'gray'));
+          
+          if (selectedType.name === 'aws-secrets-manager') {
+            const secrets = await listAwsSecrets(options.region);
+            choices = secrets.map(secret => ({
+              name: secret.Name,
+              lastChanged: secret.LastChangedDate ? new Date(secret.LastChangedDate).toISOString().split('T')[0] : 'Unknown'
+            }));
+          } else if (selectedType.name === 'env') {
+            const files = listEnvFiles(options.path || '.');
+            choices = files.map(file => ({ name: file }));
+          } else if (selectedType.name === 'json') {
+            const files = listJsonFiles(options.path || '.');
+            choices = files.map(file => ({ name: file }));
+          }
+          
+          if (choices.length === 0) {
+            // Go back to type selection with error
+            typeErrorMessage = `No ${selectedType.name} secrets found`;
+            currentStep = 'type';
+            continue;
+          }
+        } catch (error) {
+          // Go back to type selection with error
+          typeErrorMessage = `Error accessing ${selectedType.name}: ${error.message}`;
+          currentStep = 'type';
+          continue;
+        }
+      }
       
       const result = await fuzzyPrompt(
         `Select ${selectedType.name} secret:`,
@@ -1230,24 +1250,28 @@ async function runInteractiveInspect(options) {
           }
           return choice.name;
         },
-        [`type: ${selectedType.name}`]
+        [` ${selectedType.name}`]
       );
       
       if (result === null) {
         // Go back to type selection
+        console.log(colorize(`DEBUG: Going back to type selection from secret selection`, 'yellow'));
         currentStep = 'type';
         continue;
       }
       
+      console.log(colorize(`DEBUG: Selected secret: ${result.name}`, 'yellow'));
       selectedSecret = result;
       break; // Exit the loop to proceed with inspection
     }
   }
   
+    console.log(colorize(`DEBUG: Setting up final options - type: ${selectedType.name}, name: ${selectedSecret.name}`, 'yellow'));
     options.type = selectedType.name;
     options.name = selectedSecret.name;
     options.showValues = false;
     
+    console.log(colorize(`DEBUG: Returning options from runInteractiveInspect`, 'yellow'));
     return options;
   } catch (error) {
     console.error(colorize(`Error in interactive inspect: ${error.message}`, 'red'));
@@ -1282,103 +1306,85 @@ async function interactiveKeyBrowser(secretData, initialShowValues = false, brea
     
     function doRender() {
       try {
-        // Move cursor to top
-        process.stdout.write('\x1b[H');
-      
-      let currentLine = 0;
-      
-      // Show breadcrumbs
-      if (breadcrumbs.length > 0) {
-        const breadcrumbText = breadcrumbs.join(' > ');
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(colorize(`📍 ${breadcrumbText}`, 'gray'));
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log('');
-        currentLine += 2;
-      }
-      
-      if (searchMode || query.length > 0) {
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(`Search: ${colorize(query, 'bright')}`);
-      }
-      process.stdout.write('\x1b[K'); // Clear line
-      console.log(colorize(`Values: ${showValues ? 'ON' : 'OFF'} (Ctrl+V to toggle)`, 'gray'));
-      process.stdout.write('\x1b[K'); // Clear line
-      console.log('');
-      currentLine += (searchMode || query.length > 0) ? 4 : 3;
-      
-      filteredKeys = fuzzySearch(query, keys);
-      
-      if (filteredKeys.length === 0) {
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(colorize('No matches found', 'yellow'));
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(colorize('\n/ or type to search, Ctrl+V to toggle values, Ctrl+C to exit', 'gray'));
-        currentLine += 3;
-        // Clear remaining lines
-        process.stdout.write('\x1b[J');
-        lastRenderedLines = currentLine;
-        return;
-      }
-      
-      // Keep selected index within bounds
-      selectedIndex = Math.min(selectedIndex, filteredKeys.length - 1);
-      selectedIndex = Math.max(selectedIndex, 0);
-      
-      // Calculate available height (terminal height - header lines - footer lines)
-      const terminalHeight = process.stdout.rows || 24;
-      const breadcrumbLines = breadcrumbs.length > 0 ? 2 : 0; // breadcrumb + empty line
-      const searchLines = (searchMode || query.length > 0) ? 1 : 0; // Search line if in search mode
-      const headerLines = 3 + searchLines + breadcrumbLines; // Values + empty line + optional search + breadcrumbs
-      const footerLines = 4; // count line + instructions + potential "more items" + buffer
-      const availableHeight = Math.max(3, terminalHeight - headerLines - footerLines);
-      
-      // Center the selection in the available view
-      const halfHeight = Math.floor(availableHeight / 2);
-      const startIndex = Math.max(0, selectedIndex - halfHeight);
-      const endIndex = Math.min(filteredKeys.length, startIndex + availableHeight);
-      
-      for (let i = startIndex; i < endIndex; i++) {
-        const key = filteredKeys[i];
-        const isSelected = i === selectedIndex && !searchMode;
-        const prefix = isSelected ? colorize('> ', 'green') : '  ';
-        const keyColor = isSelected ? 'bright' : 'reset';
+        // Clear entire screen and move cursor to top
+        process.stdout.write('\x1b[2J\x1b[H');
         
-        process.stdout.write('\x1b[K'); // Clear line
-        if (showValues) {
-          const value = secretData[key];
-          const displayValue = String(value);
-          // Truncate long values
-          const truncatedValue = displayValue.length > 60 
-            ? displayValue.substring(0, 57) + '...' 
-            : displayValue;
-          console.log(`${prefix}${colorize(key, keyColor)}: ${colorize(truncatedValue, 'cyan')}`);
+        let output = [];
+        
+        // Show breadcrumbs
+        if (breadcrumbs.length > 0) {
+          const breadcrumbText = breadcrumbs.join(' > ');
+          output.push(colorize(`📍 ${breadcrumbText}`, 'gray'));
+          output.push('');
+        }
+        
+        // Search field (only if in search mode or has query)
+        if (searchMode || query.length > 0) {
+          output.push(`Search: ${colorize(query, 'bright')}`);
+        }
+        
+        // Values toggle
+        output.push(colorize(`Values: ${showValues ? 'ON' : 'OFF'} (Ctrl+V to toggle)`, 'gray'));
+        output.push('');
+        
+        filteredKeys = fuzzySearch(query, keys);
+        
+        if (filteredKeys.length === 0) {
+          output.push(colorize('No matches found', 'yellow'));
         } else {
-          console.log(`${prefix}${colorize(key, keyColor)}`);
+          // Keep selected index within bounds
+          selectedIndex = Math.min(selectedIndex, filteredKeys.length - 1);
+          selectedIndex = Math.max(selectedIndex, 0);
+          
+          // Calculate available height
+          const terminalHeight = process.stdout.rows || 24;
+          const usedLines = output.length + 6; // current output + instructions + buffer
+          const availableHeight = Math.max(3, terminalHeight - usedLines);
+          
+          // Center the selection in the available view
+          const halfHeight = Math.floor(availableHeight / 2);
+          const startIndex = Math.max(0, selectedIndex - halfHeight);
+          const endIndex = Math.min(filteredKeys.length, startIndex + availableHeight);
+          
+          for (let i = startIndex; i < endIndex; i++) {
+            const key = filteredKeys[i];
+            const isSelected = i === selectedIndex && !searchMode;
+            const prefix = isSelected ? colorize('> ', 'green') : '  ';
+            const keyColor = isSelected ? 'bright' : 'reset';
+            
+            if (showValues) {
+              const value = secretData[key];
+              const displayValue = String(value);
+              // Truncate long values
+              const truncatedValue = displayValue.length > 60 
+                ? displayValue.substring(0, 57) + '...' 
+                : displayValue;
+              output.push(`${prefix}${colorize(key, keyColor)}: ${colorize(truncatedValue, 'cyan')}`);
+            } else {
+              output.push(`${prefix}${colorize(key, keyColor)}`);
+            }
+          }
+          
+          if (filteredKeys.length > availableHeight) {
+            const showing = endIndex - startIndex;
+            const remaining = filteredKeys.length - showing;
+            if (remaining > 0) {
+              output.push(colorize(`... ${remaining} more items`, 'gray'));
+            }
+          }
         }
-        currentLine += 1;
-      }
-      
-      if (filteredKeys.length > availableHeight) {
-        const showing = endIndex - startIndex;
-        const remaining = filteredKeys.length - showing;
-        if (remaining > 0) {
-          process.stdout.write('\x1b[K'); // Clear line
-          console.log(colorize(`\n... ${remaining} more items`, 'gray'));
-          currentLine += 2;
-        }
-      }
-      
-      process.stdout.write('\x1b[K'); // Clear line
-      console.log(colorize(`\nShowing ${filteredKeys.length} of ${keys.length} keys`, 'gray'));
-        const escapeText = breadcrumbs.length > 0 ? 'Esc to go back, ' : '';
-        process.stdout.write('\x1b[K'); // Clear line
-        console.log(colorize(`Use ↑↓/jk to navigate, / or type to search, Ctrl+V to toggle values, ${escapeText}Ctrl+C to exit`, 'gray'));
-        currentLine += 3;
         
-        // Clear any remaining lines from previous render
-        process.stdout.write('\x1b[J');
-        lastRenderedLines = currentLine;
+        // Footer info
+        output.push('');
+        output.push(colorize(`Showing ${filteredKeys.length} of ${keys.length} keys`, 'gray'));
+        
+        // Instructions
+        const escapeText = breadcrumbs.length > 0 ? 'Esc to go back, ' : '';
+        output.push(colorize(`Use ↑↓/jk to navigate, / or type to search, Ctrl+V to toggle values, ${escapeText}Ctrl+C to exit`, 'gray'));
+        
+        // Write everything at once
+        console.log(output.join('\n'));
+        
       } catch (error) {
         console.error(colorize(`Key browser render error: ${error.message}`, 'red'));
       }
@@ -1428,6 +1434,13 @@ async function interactiveKeyBrowser(secretData, initialShowValues = false, brea
       } else if (keyStr === '\u001b[B' || keyStr === 'j') { // Down arrow or j
         selectedIndex = Math.min(filteredKeys.length - 1, selectedIndex + 1);
         render(true); // Immediate for navigation
+      } else if (keyStr === '\r' || keyStr === '\n') { // Enter
+        if (searchMode) {
+          // Exit search mode (preserve search text)
+          searchMode = false;
+          render(true);
+        }
+        // Note: No else case since this is a browser, not a selector
       } else if (keyStr === '\u007f' || keyStr === '\b') { // Backspace
         query = query.slice(0, -1);
         selectedIndex = 0;
