@@ -395,43 +395,6 @@ For listing secrets (list command):
 }
 ```
 
-## Secret Format
-
-Your secret must be stored as a JSON object:
-
-```json
-{
-  "DATABASE_URL": "postgres://user:pass@host:5432/db",
-  "API_KEY": "abc123",
-  "DEBUG": "true",
-  "PORT": "3000"
-}
-```
-
-Nested objects and arrays are not supported.
-
-## Output Formats
-
-### Environment File (.env)
-
-```bash
-DATABASE_URL="postgres://user:pass@host:5432/db"
-API_KEY="abc123"
-DEBUG="true"
-PORT="3000"
-```
-
-### JSON File
-
-```json
-{
-  "DATABASE_URL": "postgres://user:pass@host:5432/db",
-  "API_KEY": "abc123",
-  "DEBUG": "true",
-  "PORT": "3000"
-}
-```
-
 ## Error Handling
 
 The tool will fail with clear error messages if:
