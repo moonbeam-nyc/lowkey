@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(make test-build:*)",
-      "Bash(node cli.js --help)"
+      "Bash(node cli.js --help)",
+      "Bash(node:*)"
     ],
     "deny": []
   }
