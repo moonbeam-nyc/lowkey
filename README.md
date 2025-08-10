@@ -6,6 +6,8 @@
 
 Sync secrets between any supported types with ease.
 
+Currently supports AWS Secrets Manager, env, and json.
+
 ## Use Cases
 
 **Dev team environment sharing:** Quickly sync your team's shared secrets from AWS Secrets Manager to local `.env` files, ensuring everyone has the same environment variables without manually copying credentials.
