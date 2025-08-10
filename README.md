@@ -148,6 +148,7 @@ lowkey x [options]  # Short alias
 #### Interactive Navigation
 
 - `↑↓` or `j/k` - Navigate items
+- `Ctrl+U/D` or `Ctrl+B/F` - Page up/down
 - `/` - Enter search mode (shows cursor in search field)
 - `e` - Edit selected secret (env/json/AWS)
 - `Ctrl+V` - Toggle showing values vs keys only
