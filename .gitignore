@@ -1,6 +1,7 @@
 node_modules/
 *.log
-!.env.example
 .DS_Store
+
 env*.json
 .env*
+*.env
