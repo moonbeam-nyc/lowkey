@@ -68,7 +68,7 @@ Examples:
 `);
 }
 
-async function handleInteractiveCommand(options) {
+async function handleInteractiveCommand(options, searchState = {}) {
   try {
     // Enter alternate screen buffer to preserve terminal history
     process.stdout.write('\x1b[?1049h');
@@ -86,7 +86,7 @@ async function handleInteractiveCommand(options) {
     process.on('SIGTERM', restoreScreen);
     
     // Start the interactive flow immediately
-    const interactiveOptions = await runInteractiveInspect(options);
+    const { options: interactiveOptions, searchState: newSearchState } = await runInteractiveInspect(options, searchState);
     
     try {
       // Fetch the secret data - map inspect options to fetchSecret format
@@ -120,12 +120,14 @@ async function handleInteractiveCommand(options) {
       
       if (result === 'BACK') {
         // Go back to secret selection for this type
+        
+        
         const secretOptions = { 
           ...options, 
           type: interactiveOptions.type,
           startStep: 'secret' // Start from secret selection instead of type selection
         };
-        return await handleInteractiveCommand(secretOptions);
+        return await handleInteractiveCommand(secretOptions, newSearchState);
       }
       
       // Normal completion - restore screen
