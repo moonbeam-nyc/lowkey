@@ -26,6 +26,11 @@ function parseInteractiveArgs(args) {
     }
   }
 
+  // If no region was specified via CLI, check environment variable
+  if (!options.region) {
+    options.region = process.env.AWS_REGION || null;
+  }
+
   return options;
 }
 
@@ -111,7 +116,7 @@ async function handleInteractiveCommand(options) {
       
       // Use interactive key browser
       const breadcrumbs = [` ${interactiveOptions.type}`, `${interactiveOptions.name}`];
-      const result = await interactiveKeyBrowser(secretData, interactiveOptions.showValues, breadcrumbs);
+      const result = await interactiveKeyBrowser(secretData, interactiveOptions.showValues, breadcrumbs, interactiveOptions.type, interactiveOptions.name, interactiveOptions.region);
       
       if (result === 'BACK') {
         // Go back to secret selection for this type
