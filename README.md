@@ -10,7 +10,7 @@ Currently supports AWS Secrets Manager, env, and json.
 
 ## Use Cases
 
-**Dev team environment sharing:** Quickly sync your team's shared secrets from AWS Secrets Manager to local `.env` files, ensuring everyone has the same environment variables without manually copying credentials.
+**Team environment sharing:** Sync shared secrets from AWS Secrets Manager to local `.env` files.
 
 ```bash
 lowkey copy \
@@ -20,7 +20,7 @@ lowkey copy \
   --output-name .env.dev
 ```
 
-**Discovery and inventory:** List available secrets across different storage types to see what's available before copying.
+**Discovery and inventory:** List available secrets across different storage types.
 
 ```bash
 # List all AWS secrets visible to your account
@@ -29,6 +29,15 @@ lowkey list --type aws-secrets-manager --region us-east-1
 # List local .env files and JSON configuration files
 lowkey list --type env --path ./config
 lowkey list --type json --path ./secrets
+```
+
+**Frequent environment updates:** Browse and edit environment variables with fuzzy search and live editing.
+
+```bash
+# Launch interactive mode with fuzzy search for quick browsing and editing
+# Press '/' to search, 'e' to edit, Ctrl+V to toggle value visibility
+lowkey interactive
+lowkey x
 ```
 
 ## Installation
@@ -60,12 +69,7 @@ lowkey <command> [options]
 - `inspect` - Show help for inspecting secrets
 - `interactive, x` - Interactive secret browser and inspector with editing capabilities
 
-### Global Options
-
-- `--version, -v` - Show version number
-- `--help, -h` - Show help message
-
-Use `lowkey <command> --help` for more information about each command.
+---
 
 ### Copy Command
 
@@ -86,6 +90,8 @@ lowkey copy --input-type <type> --input-name <name|path> --output-type <type> [o
 - `-y, --yes` - Auto-confirm prompts (e.g., secret creation)
 - `--help, -h` - Show help message
 
+---
+
 ### List Command
 
 List available secrets for each storage type:
@@ -101,6 +107,8 @@ lowkey list --type <type> [options]
 - `--path <path>` - Directory path to search for files (default: current directory)
 - `--help, -h` - Show help message
 
+---
+
 ### Inspect Command
 
 Show help and guidance for inspecting secrets:
@@ -110,6 +118,8 @@ lowkey inspect --help
 ```
 
 The inspect command provides detailed information about how to examine secret contents and structure.
+
+---
 
 ### Interactive Command
 
