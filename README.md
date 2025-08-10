@@ -4,7 +4,7 @@
 
 # lowkey · [![Docker: Build & Push](https://github.com/moonbeam-nyc/lowkey/actions/workflows/docker.yml/badge.svg)](https://github.com/moonbeam-nyc/lowkey/actions/workflows/docker.yml)
 
-Sync secrets from various secret stores to different output formats with ease.
+Sync secrets between any supported types with ease.
 
 ## Use Cases
 
