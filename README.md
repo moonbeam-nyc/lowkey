@@ -57,6 +57,8 @@ lowkey <command> [options]
 
 - `copy` - Copy secrets between different storage types
 - `list` - List available secrets for each storage type
+- `inspect` - Show help for inspecting secrets
+- `interactive, x` - Interactive secret browser and inspector with editing capabilities
 
 ### Global Options
 
@@ -99,11 +101,49 @@ lowkey list --type <type> [options]
 - `--path <path>` - Directory path to search for files (default: current directory)
 - `--help, -h` - Show help message
 
-### Supported Storage Types
+### Inspect Command
 
-- `aws-secrets-manager` - AWS Secrets Manager
-- `json` - JSON files (excludes standard files like package.json, tsconfig.json)
-- `env` - Environment files (.env* format)
+Show help and guidance for inspecting secrets:
+
+```bash
+lowkey inspect --help
+```
+
+The inspect command provides detailed information about how to examine secret contents and structure.
+
+### Interactive Command
+
+Launch an interactive secret browser and inspector with fuzzy search and editing capabilities:
+
+```bash
+lowkey interactive [options]
+lowkey x [options]  # Short alias
+```
+
+#### Interactive Features
+
+- **Fuzzy searchable interface** - Navigate with arrow keys, press `/` to search
+- **Multi-format support** - Browse AWS Secrets Manager, .env files, and JSON files
+- **Live editing** - Press `e` to edit secrets in your preferred editor ($EDITOR or vim)
+- **Real-time updates** - Changes are immediately saved to AWS or local files
+- **Search preservation** - Search queries are preserved when navigating between views
+- **Breadcrumb navigation** - Use ESC to go back, with preserved context
+
+#### Interactive Options
+
+- `--region <region>` - AWS region (or use AWS_REGION environment variable)
+- `--path <path>` - Directory path to search for files (default: current directory)
+- `--help, -h` - Show help message
+
+#### Interactive Navigation
+
+- `↑↓` or `j/k` - Navigate items
+- `/` - Enter search mode (shows cursor in search field)
+- `e` - Edit selected secret (env/json/AWS)
+- `Ctrl+V` - Toggle showing values vs keys only
+- `Enter` - Select item
+- `Esc` - Go back or exit search mode
+- `Ctrl+C` - Exit
 
 ### Examples
 
@@ -145,6 +185,21 @@ lowkey list --type json --path ./config
 
 # List env files in a specific directory
 lowkey list --type env --path ./environments
+```
+
+#### Interactive Examples
+```bash
+# Launch interactive mode
+lowkey interactive
+
+# Use short alias
+lowkey x
+
+# Specify AWS region for browsing AWS secrets
+lowkey interactive --region us-west-2
+
+# Browse files in specific directory
+lowkey x --path ./config
 ```
 
 #### Docker Usage
@@ -204,6 +259,25 @@ docker run --rm \
   ghcr.io/moonbeam-nyc/lowkey:latest \
   list --type json --path /workspace
 ```
+
+##### Interactive Examples
+```bash
+# Interactive AWS secrets browser
+docker run --rm -it \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_REGION=us-east-1 \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  interactive
+
+# Interactive local files browser with volume mount
+docker run --rm -it \
+  -v $(pwd):/workspace \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  x --path /workspace
+```
+
+**Note:** Interactive mode requires the `-it` flags for Docker to provide a proper terminal interface.
 
 ## Local Development
 
