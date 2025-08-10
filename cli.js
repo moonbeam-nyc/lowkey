@@ -813,12 +813,23 @@ async function handleListCommand(options) {
 
 async function handleInteractiveCommand(options) {
   try {
-    console.log(colorize(`DEBUG: Starting handleInteractiveCommand`, 'yellow'));
+    // Enter alternate screen buffer to preserve terminal history
+    process.stdout.write('\x1b[?1049h');
+    
+    // Ensure we restore the screen on exit
+    const restoreScreen = () => {
+      process.stdout.write('\x1b[?1049l');
+    };
+    
+    process.on('exit', restoreScreen);
+    process.on('SIGINT', () => {
+      restoreScreen();
+      process.exit(0);
+    });
+    process.on('SIGTERM', restoreScreen);
+    
     // Start the interactive flow immediately
     const interactiveOptions = await runInteractiveInspect(options);
-    console.log(colorize(`DEBUG: Got interactive options - type: ${interactiveOptions?.type}, name: ${interactiveOptions?.name}`, 'yellow'));
-    
-    console.error(colorize(`Inspecting ${interactiveOptions.type} secret: '${interactiveOptions.name}'...`, 'gray'));
     
     try {
       // Fetch the secret data - map inspect options to fetchSecret format
@@ -852,7 +863,6 @@ async function handleInteractiveCommand(options) {
       
       if (result === 'BACK') {
         // Go back to secret selection for this type
-        console.log(colorize(`DEBUG: Going back to secret selection for type: ${interactiveOptions.type}`, 'yellow'));
         const secretOptions = { 
           ...options, 
           type: interactiveOptions.type,
@@ -861,13 +871,17 @@ async function handleInteractiveCommand(options) {
         return await handleInteractiveCommand(secretOptions);
       }
       
+      // Normal completion - restore screen
+      process.stdout.write('\x1b[?1049l');
+      
     } catch (error) {
+      process.stdout.write('\x1b[?1049l');
       console.error(colorize(`Error inspecting secret: ${error.message}`, 'red'));
       process.exit(1);
     }
   } catch (error) {
+    process.stdout.write('\x1b[?1049l');
     console.error(colorize(`Fatal error in interactive command: ${error.message}`, 'red'));
-    console.error(colorize(`Stack: ${error.stack}`, 'gray'));
     process.exit(1);
   }
 }
@@ -909,7 +923,6 @@ async function fuzzyPrompt(question, choices, displayFn = null, breadcrumbs = []
     let query = '';
     let filteredChoices = choices;
     let selectedIndex = 0;
-    let lastRenderedLines = 0;
     let renderTimeout = null;
     let searchMode = false;
     
@@ -927,7 +940,7 @@ async function fuzzyPrompt(question, choices, displayFn = null, breadcrumbs = []
     
     function doRender() {
       try {
-        // Clear entire screen and move cursor to top
+        // Clear screen and move cursor to top (alternate screen buffer)
         process.stdout.write('\x1b[2J\x1b[H');
         
         let output = [];
@@ -1007,7 +1020,7 @@ async function fuzzyPrompt(question, choices, displayFn = null, breadcrumbs = []
         output.push(colorize(instructions, 'gray'));
         
         // Write everything at once
-        console.log(output.join('\n'));
+        process.stdout.write(output.join('\n') + '\n');
         
       } catch (error) {
         console.error(colorize(`Render error: ${error.message}`, 'red'));
@@ -1028,6 +1041,7 @@ async function fuzzyPrompt(question, choices, displayFn = null, breadcrumbs = []
         process.stdin.pause();
         process.stdin.removeAllListeners('data');
         rl.close();
+        process.stdout.write('\x1b[?1049l');
         process.exit(0);
       } else if (keyStr === '\u001b') { // Escape
         if (searchMode) {
@@ -1101,43 +1115,9 @@ async function fuzzyPrompt(question, choices, displayFn = null, breadcrumbs = []
   });
 }
 
-// Interactive yes/no prompt
-async function confirmPrompt(question, defaultValue = false) {
-  return new Promise((resolve) => {
-    const defaultText = defaultValue ? 'Y/n' : 'y/N';
-    console.log(colorize(`${question} (${defaultText}): `, 'cyan'));
-    
-    process.stdin.setRawMode(true);
-    process.stdin.resume();
-    process.stdin.once('data', (key) => {
-      const keyStr = key.toString().toLowerCase();
-      
-      process.stdin.setRawMode(false);
-      process.stdin.pause();
-      
-      if (keyStr === '\u0003') { // Ctrl+C
-        process.exit(0);
-      } else if (keyStr === 'y') {
-        console.log('y');
-        resolve(true);
-      } else if (keyStr === 'n') {
-        console.log('n');
-        resolve(false);
-      } else if (keyStr === '\r' || keyStr === '\n') { // Enter
-        console.log(defaultValue ? 'y' : 'n');
-        resolve(defaultValue);
-      } else {
-        // For any other key, use default
-        console.log(defaultValue ? 'y' : 'n');
-        resolve(defaultValue);
-      }
-    });
-  });
-}
 
 async function runInteractiveInspect(options) {
   try {
-    console.log(colorize(`DEBUG: Starting runInteractiveInspect with step: ${options.startStep || 'type'}, type: ${options.type}`, 'yellow'));
     let currentStep = options.startStep || 'type';
     let selectedType = options.type ? { name: options.type } : null;
     let selectedSecret = null;
@@ -1145,9 +1125,6 @@ async function runInteractiveInspect(options) {
     
     while (true) {
     if (currentStep === 'type') {
-      console.log(colorize('🔍 Interactive Secret Inspector', 'bright'));
-      console.log('');
-      
       const types = [
         { name: 'aws-secrets-manager', description: 'AWS Secrets Manager' },
         { name: 'env', description: 'Environment files (.env*)' },
@@ -1170,7 +1147,6 @@ async function runInteractiveInspect(options) {
       selectedType = result;
       
       // Check if the selected type has available secrets before proceeding
-      console.log(colorize(`\nChecking ${selectedType.name} secrets...`, 'gray'));
       
       try {
         let choices = [];
@@ -1211,7 +1187,6 @@ async function runInteractiveInspect(options) {
       if (choices.length === 0) {
         // Need to fetch choices
         try {
-          console.log(colorize(`\nFetching ${selectedType.name} secrets...`, 'gray'));
           
           if (selectedType.name === 'aws-secrets-manager') {
             const secrets = await listAwsSecrets(options.region);
@@ -1255,27 +1230,21 @@ async function runInteractiveInspect(options) {
       
       if (result === null) {
         // Go back to type selection
-        console.log(colorize(`DEBUG: Going back to type selection from secret selection`, 'yellow'));
         currentStep = 'type';
         continue;
       }
       
-      console.log(colorize(`DEBUG: Selected secret: ${result.name}`, 'yellow'));
       selectedSecret = result;
       break; // Exit the loop to proceed with inspection
     }
   }
   
-    console.log(colorize(`DEBUG: Setting up final options - type: ${selectedType.name}, name: ${selectedSecret.name}`, 'yellow'));
     options.type = selectedType.name;
     options.name = selectedSecret.name;
     options.showValues = false;
     
-    console.log(colorize(`DEBUG: Returning options from runInteractiveInspect`, 'yellow'));
     return options;
   } catch (error) {
-    console.error(colorize(`Error in interactive inspect: ${error.message}`, 'red'));
-    console.error(colorize(`Stack: ${error.stack}`, 'gray'));
     throw error;
   }
 }
@@ -1288,7 +1257,6 @@ async function interactiveKeyBrowser(secretData, initialShowValues = false, brea
     let showValues = initialShowValues;
     let selectedIndex = 0;
     let filteredKeys = keys;
-    let lastRenderedLines = 0;
     let renderTimeout = null;
     let searchMode = false;
     
@@ -1306,7 +1274,7 @@ async function interactiveKeyBrowser(secretData, initialShowValues = false, brea
     
     function doRender() {
       try {
-        // Clear entire screen and move cursor to top
+        // Clear screen and move cursor to top (alternate screen buffer)
         process.stdout.write('\x1b[2J\x1b[H');
         
         let output = [];
@@ -1383,7 +1351,7 @@ async function interactiveKeyBrowser(secretData, initialShowValues = false, brea
         output.push(colorize(`Use ↑↓/jk to navigate, / or type to search, Ctrl+V to toggle values, ${escapeText}Ctrl+C to exit`, 'gray'));
         
         // Write everything at once
-        console.log(output.join('\n'));
+        process.stdout.write(output.join('\n') + '\n');
         
       } catch (error) {
         console.error(colorize(`Key browser render error: ${error.message}`, 'red'));
@@ -1404,7 +1372,8 @@ async function interactiveKeyBrowser(secretData, initialShowValues = false, brea
         process.stdin.setRawMode(false);
         process.stdin.removeListener('data', handleKeyPress);
         process.stdin.pause();
-        resolve();
+        process.stdout.write('\x1b[?1049l');
+        process.exit(0);
       } else if (keyStr === '\u001b') { // Escape
         if (searchMode) {
           // First escape: exit search mode (preserve search text)
