@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { SecretsManagerClient, GetSecretValueCommand, PutSecretValueCommand, CreateSecretCommand } = require('@aws-sdk/client-secrets-manager');
+const { SecretsManagerClient, GetSecretValueCommand, PutSecretValueCommand, CreateSecretCommand, ListSecretsCommand } = require('@aws-sdk/client-secrets-manager');
 
 // Color codes for terminal output
 const colors = {
@@ -26,7 +26,38 @@ function colorize(text, color) {
 
 function parseArgs() {
   const args = process.argv.slice(2);
+  
+  if (args.length === 0) {
+    showHelp();
+    process.exit(1);
+  }
+  
+  const command = args[0];
+  
+  if (command === '--version' || command === '-v') {
+    showVersion();
+    process.exit(0);
+  } else if (command === '--help' || command === '-h') {
+    showHelp();
+    process.exit(0);
+  }
+  
+  if (!['copy', 'list'].includes(command)) {
+    console.error(colorize(`Error: Unknown command '${command}'. Available commands: copy, list`, 'red'));
+    showHelp();
+    process.exit(1);
+  }
+  
+  if (command === 'copy') {
+    return parseCopyArgs(args.slice(1));
+  } else if (command === 'list') {
+    return parseListArgs(args.slice(1));
+  }
+}
+
+function parseCopyArgs(args) {
   const options = {
+    command: 'copy',
     inputType: null,
     inputName: null,
     region: null,
@@ -53,36 +84,37 @@ function parseArgs() {
       options.stage = args[++i];
     } else if (arg === '-y' || arg === '--yes') {
       options.autoYes = true;
-    } else if (arg === '--version' || arg === '-v') {
-      showVersion();
-      process.exit(0);
     } else if (arg === '--help' || arg === '-h') {
-      showHelp();
+      showCopyHelp();
       process.exit(0);
+    } else {
+      console.error(colorize(`Error: Unknown option '${arg}'`, 'red'));
+      showCopyHelp();
+      process.exit(1);
     }
   }
 
   if (!options.inputType) {
     console.error(colorize('Error: --input-type is required', 'red'));
-    showHelp();
+    showCopyHelp();
     process.exit(1);
   }
 
   if (!options.inputName) {
     console.error(colorize('Error: --input-name is required', 'red'));
-    showHelp();
+    showCopyHelp();
     process.exit(1);
   }
 
   if (!options.outputType) {
     console.error(colorize('Error: --output-type is required', 'red'));
-    showHelp();
+    showCopyHelp();
     process.exit(1);
   }
 
   if ((options.inputType === 'aws-secrets-manager' || options.outputType === 'aws-secrets-manager') && !options.region && !process.env.AWS_REGION && !process.env.AWS_DEFAULT_REGION) {
     console.error(colorize('Error: --region is required when using aws-secrets-manager as input or output type (or set AWS_REGION/AWS_DEFAULT_REGION environment variable)', 'red'));
-    showHelp();
+    showCopyHelp();
     process.exit(1);
   }
 
@@ -96,6 +128,52 @@ function parseArgs() {
     process.exit(1);
   }
 
+  return options;
+}
+
+function parseListArgs(args) {
+  const options = {
+    command: 'list',
+    type: null,
+    region: null,
+    path: '.'
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    
+    if (arg === '--type' && i + 1 < args.length) {
+      options.type = args[++i];
+    } else if (arg === '--region' && i + 1 < args.length) {
+      options.region = args[++i];
+    } else if (arg === '--path' && i + 1 < args.length) {
+      options.path = args[++i];
+    } else if (arg === '--help' || arg === '-h') {
+      showListHelp();
+      process.exit(0);
+    } else {
+      console.error(colorize(`Error: Unknown option '${arg}'`, 'red'));
+      showListHelp();
+      process.exit(1);
+    }
+  }
+
+  if (!options.type) {
+    console.error(colorize('Error: --type is required', 'red'));
+    showListHelp();
+    process.exit(1);
+  }
+
+  if (options.type === 'aws-secrets-manager' && !options.region && !process.env.AWS_REGION && !process.env.AWS_DEFAULT_REGION) {
+    console.error(colorize('Error: --region is required when listing aws-secrets-manager (or set AWS_REGION/AWS_DEFAULT_REGION environment variable)', 'red'));
+    showListHelp();
+    process.exit(1);
+  }
+
+  if (!['aws-secrets-manager', 'json', 'env'].includes(options.type)) {
+    console.error(colorize(`Error: Unsupported type '${options.type}'. Supported: aws-secrets-manager, json, env`, 'red'));
+    process.exit(1);
+  }
 
   return options;
 }
@@ -119,7 +197,30 @@ function promptUser(question) {
 
 function showHelp() {
   console.log(`
-Usage: lowkey --input-type <type> --input-name <name|path> --output-type <type> [options]
+Usage: lowkey <command> [options]
+
+Commands:
+  copy                     Copy secrets between storage types
+  list                     List available secrets for each storage type
+
+Global Options:
+  --version, -v            Show version number
+  --help, -h               Show this help message
+
+Use 'lowkey <command> --help' for more information about a command.
+
+Examples:
+  lowkey copy --input-type env --input-name .env --output-type json
+  lowkey list --type aws-secrets-manager --region us-east-1
+  lowkey list --type env --path ./config
+`);
+}
+
+function showCopyHelp() {
+  console.log(`
+Usage: lowkey copy --input-type <type> --input-name <name|path> --output-type <type> [options]
+
+Copy secrets between different storage types.
 
 Options:
   --input-type <type>      Input source type (required)
@@ -129,37 +230,60 @@ Options:
   --output-name <file>     Output file path (default: stdout)
   --stage <stage>          Secret version stage (default: AWSCURRENT)
   -y, --yes                Auto-confirm prompts (e.g., secret creation)
-  --version, -v            Show version number
   --help, -h               Show this help message
 
-Supported input types:
-  aws-secrets-manager      AWS Secrets Manager
-  json                     JSON file
-  env                      Environment file (.env format)
-
-Supported output types:
+Supported types:
   aws-secrets-manager      AWS Secrets Manager
   json                     JSON file
   env                      Environment file (.env format)
 
 Examples:
   # AWS Secrets Manager to stdout
-  lowkey --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
+  lowkey copy --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
 
   # JSON file to env file
-  lowkey --input-type json --input-name secrets.json --output-type env --output-name .env
+  lowkey copy --input-type json --input-name secrets.json --output-type env --output-name .env
 
   # Env file to JSON
-  lowkey --input-type env --input-name .env --output-type json
+  lowkey copy --input-type env --input-name .env --output-type json
 
   # AWS to JSON file
-  lowkey --input-type aws-secrets-manager --input-name my-secrets --output-type json --output-name config.json
+  lowkey copy --input-type aws-secrets-manager --input-name my-secrets --output-type json --output-name config.json
 
   # Upload JSON file to AWS Secrets Manager
-  lowkey --input-type json --input-name config.json --output-type aws-secrets-manager --output-name my-uploaded-secret
+  lowkey copy --input-type json --input-name config.json --output-type aws-secrets-manager --output-name my-uploaded-secret
 
   # Auto-create secret if it doesn't exist
-  lowkey --input-type env --input-name .env --output-type aws-secrets-manager --output-name new-secret -y
+  lowkey copy --input-type env --input-name .env --output-type aws-secrets-manager --output-name new-secret -y
+`);
+}
+
+function showListHelp() {
+  console.log(`
+Usage: lowkey list --type <type> [options]
+
+List available secrets for each storage type.
+
+Options:
+  --type <type>            Storage type to list (required)
+  --region <region>        AWS region (or use AWS_REGION environment variable)
+  --path <path>            Directory path to search for files (default: current directory)
+  --help, -h               Show this help message
+
+Supported types:
+  aws-secrets-manager      List AWS Secrets Manager secrets visible to this account
+  json                     List *.json files
+  env                      List .env* files
+
+Examples:
+  # List AWS secrets
+  lowkey list --type aws-secrets-manager --region us-east-1
+
+  # List env files in current directory
+  lowkey list --type env
+
+  # List JSON files in specific directory
+  lowkey list --type json --path ./config
 `);
 }
 
@@ -404,53 +528,205 @@ async function generateOutput(secretData, outputType, outputName, region, stage,
   }
 }
 
+async function listAwsSecrets(region) {
+  const clientConfig = region ? { region } : {};
+  const client = new SecretsManagerClient(clientConfig);
+  
+  try {
+    let allSecrets = [];
+    let nextToken = null;
+    
+    do {
+      const command = new ListSecretsCommand({
+        NextToken: nextToken
+      });
+      
+      const response = await client.send(command);
+      allSecrets = allSecrets.concat(response.SecretList || []);
+      nextToken = response.NextToken;
+    } while (nextToken);
+    
+    return allSecrets;
+  } catch (error) {
+    if (error.name === 'UnauthorizedOperation' || error.name === 'AccessDeniedException') {
+      throw new Error(`Access denied: ${error.message}`);
+    } else if (error.name === 'InvalidRequestException') {
+      throw new Error(`Invalid request: ${error.message}`);
+    } else if (error.name === 'InternalServiceErrorException') {
+      throw new Error(`AWS internal service error: ${error.message}`);
+    } else {
+      throw new Error(`AWS error: ${error.message}`);
+    }
+  }
+}
+
+function listEnvFiles(directory) {
+  try {
+    const files = fs.readdirSync(directory);
+    const envFiles = files.filter(file => {
+      const fullPath = path.join(directory, file);
+      return fs.statSync(fullPath).isFile() && file.match(/^\.env/);
+    });
+    
+    return envFiles;
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error(`Directory not found: ${directory}`);
+    } else if (error.code === 'EACCES') {
+      throw new Error(`Permission denied: ${directory}`);
+    }
+    throw new Error(`Failed to read directory: ${error.message}`);
+  }
+}
+
+function listJsonFiles(directory) {
+  try {
+    const files = fs.readdirSync(directory);
+    
+    // Common standard JSON files to exclude
+    const excludeFiles = [
+      'package.json',
+      'package-lock.json',
+      'tsconfig.json',
+      'jsconfig.json',
+      'webpack.config.json',
+      'vite.config.json',
+      'rollup.config.json',
+      'babel.config.json',
+      '.eslintrc.json',
+      '.prettierrc.json',
+      'jest.config.json',
+      'tailwind.config.json',
+      'next.config.json',
+      'nuxt.config.json',
+      'angular.json',
+      'composer.json',
+      'manifest.json',
+      'vercel.json',
+      'netlify.json'
+    ];
+    
+    const jsonFiles = files.filter(file => {
+      const fullPath = path.join(directory, file);
+      return fs.statSync(fullPath).isFile() && 
+             file.endsWith('.json') && 
+             !excludeFiles.includes(file.toLowerCase());
+    });
+    
+    return jsonFiles;
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error(`Directory not found: ${directory}`);
+    } else if (error.code === 'EACCES') {
+      throw new Error(`Permission denied: ${directory}`);
+    }
+    throw new Error(`Failed to read directory: ${error.message}`);
+  }
+}
+
+async function handleListCommand(options) {
+  console.error(colorize(`Listing ${options.type} secrets...`, 'gray'));
+  
+  switch (options.type) {
+    case 'aws-secrets-manager':
+      const secrets = await listAwsSecrets(options.region);
+      if (secrets.length === 0) {
+        console.log(colorize('No secrets found in AWS Secrets Manager', 'yellow'));
+      } else {
+        console.log(colorize(`Found ${secrets.length} secret(s):`, 'green'));
+        secrets.sort((a, b) => a.Name.localeCompare(b.Name)).forEach(secret => {
+          const lastChanged = secret.LastChangedDate ? new Date(secret.LastChangedDate).toISOString().split('T')[0] : 'Unknown';
+          console.log(`  ${colorize(secret.Name, 'bright')} ${colorize(`(last changed: ${lastChanged})`, 'gray')}`);
+        });
+      }
+      break;
+      
+    case 'env':
+      const envFiles = listEnvFiles(options.path);
+      if (envFiles.length === 0) {
+        console.log(colorize(`No .env* files found in ${options.path}`, 'yellow'));
+      } else {
+        console.log(colorize(`Found ${envFiles.length} .env file(s):`, 'green'));
+        envFiles.forEach(file => {
+          console.log(`  ${colorize(file, 'bright')}`);
+        });
+      }
+      break;
+      
+    case 'json':
+      const jsonFiles = listJsonFiles(options.path);
+      if (jsonFiles.length === 0) {
+        console.log(colorize(`No *.json files found in ${options.path}`, 'yellow'));
+      } else {
+        console.log(colorize(`Found ${jsonFiles.length} JSON file(s):`, 'green'));
+        jsonFiles.forEach(file => {
+          console.log(`  ${colorize(file, 'bright')}`);
+        });
+      }
+      break;
+      
+    default:
+      throw new Error(`Unsupported type: ${options.type}`);
+  }
+}
+
+async function handleCopyCommand(options) {
+  // Send progress messages to stderr so they don't interfere with stdout output
+  console.error(colorize(`Fetching data from ${options.inputType}: '${options.inputName}'...`, 'gray'));
+  const secretString = await fetchSecret(options);
+  
+  console.error(colorize('Parsing secret data...', 'gray'));
+  const secretData = parseSecretData(secretString);
+  
+  // Validate keys for env output type
+  if (options.outputType === 'env') {
+    for (const key of Object.keys(secretData)) {
+      if (!validateEnvKey(key)) {
+        throw new Error(colorize(`Invalid environment variable key: '${key}'. Keys must match pattern [A-Za-z_][A-Za-z0-9_]*`, 'red'));
+      }
+    }
+  }
+  
+  // Handle output based on type
+  if (options.outputType === 'aws-secrets-manager') {
+    // AWS Secrets Manager requires an output name
+    if (!options.outputName) {
+      throw new Error(colorize('--output-name is required when output type is aws-secrets-manager', 'red'));
+    }
+    
+    console.error(colorize('Uploading to AWS Secrets Manager...', 'gray'));
+    const result = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes);
+    console.error(result);
+    
+  } else {
+    // File or stdout output
+    const outputContent = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes);
+    
+    if (options.outputName) {
+      // Output to file
+      backupFile(options.outputName);
+      fs.writeFileSync(options.outputName, outputContent);
+      
+      const keyCount = Object.keys(secretData).length;
+      const itemType = options.outputType === 'env' ? 'environment variables' : 'keys';
+      console.error(colorize(`Successfully written to ${options.outputName} (${keyCount} ${itemType})`, 'green'));
+    } else {
+      // Output to stdout
+      process.stdout.write(outputContent);
+    }
+  }
+}
+
 async function main() {
   try {
     const options = parseArgs();
     
-    // Send progress messages to stderr so they don't interfere with stdout output
-    console.error(colorize(`Fetching data from ${options.inputType}: '${options.inputName}'...`, 'blue'));
-    const secretString = await fetchSecret(options);
-    
-    console.error(colorize('Parsing secret data...', 'blue'));
-    const secretData = parseSecretData(secretString);
-    
-    // Validate keys for env output type
-    if (options.outputType === 'env') {
-      for (const key of Object.keys(secretData)) {
-        if (!validateEnvKey(key)) {
-          throw new Error(colorize(`Invalid environment variable key: '${key}'. Keys must match pattern [A-Za-z_][A-Za-z0-9_]*`, 'red'));
-        }
-      }
-    }
-    
-    // Handle output based on type
-    if (options.outputType === 'aws-secrets-manager') {
-      // AWS Secrets Manager requires an output name
-      if (!options.outputName) {
-        throw new Error(colorize('--output-name is required when output type is aws-secrets-manager', 'red'));
-      }
-      
-      console.error(colorize('Uploading to AWS Secrets Manager...', 'blue'));
-      const result = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes);
-      console.error(result);
-      
+    if (options.command === 'copy') {
+      await handleCopyCommand(options);
+    } else if (options.command === 'list') {
+      await handleListCommand(options);
     } else {
-      // File or stdout output
-      const outputContent = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes);
-      
-      if (options.outputName) {
-        // Output to file
-        backupFile(options.outputName);
-        fs.writeFileSync(options.outputName, outputContent);
-        
-        const keyCount = Object.keys(secretData).length;
-        const itemType = options.outputType === 'env' ? 'environment variables' : 'keys';
-        console.error(colorize(`Successfully written to ${options.outputName} (${keyCount} ${itemType})`, 'green'));
-      } else {
-        // Output to stdout
-        process.stdout.write(outputContent);
-      }
+      throw new Error(`Unknown command: ${options.command}`);
     }
     
     // Ensure the process exits cleanly

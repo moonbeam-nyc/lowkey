@@ -50,13 +50,25 @@ run-aws: ## Run container with AWS environment variables mounted
 		$(IMAGE_NAME):$(IMAGE_TAG) $(ARGS)
 
 # Example usage commands
-.PHONY: example-env
-example-env: ## Example: Get secrets as env format (requires AWS credentials)
-	$(MAKE) run-aws ARGS="--source-name example-secret --output-type env"
+.PHONY: example-copy-env
+example-copy-env: ## Example: Copy secrets to env format (requires AWS credentials)
+	$(MAKE) run-aws ARGS="copy --input-type aws-secrets-manager --input-name example-secret --output-type env"
 
-.PHONY: example-json
-example-json: ## Example: Get secrets as JSON format (requires AWS credentials)
-	$(MAKE) run-aws ARGS="--source-name example-secret --output-type json"
+.PHONY: example-copy-json
+example-copy-json: ## Example: Copy secrets to JSON format (requires AWS credentials)
+	$(MAKE) run-aws ARGS="copy --input-type aws-secrets-manager --input-name example-secret --output-type json"
+
+.PHONY: example-list-aws
+example-list-aws: ## Example: List AWS secrets (requires AWS credentials)
+	$(MAKE) run-aws ARGS="list --type aws-secrets-manager --region us-east-1"
+
+.PHONY: example-list-env
+example-list-env: ## Example: List .env files in current directory
+	docker run --rm -v $(PWD):/workspace $(IMAGE_NAME):$(IMAGE_TAG) list --type env --path /workspace
+
+.PHONY: example-list-json
+example-list-json: ## Example: List JSON files in current directory
+	docker run --rm -v $(PWD):/workspace $(IMAGE_NAME):$(IMAGE_TAG) list --type json --path /workspace
 
 # File output commands
 .PHONY: run-output

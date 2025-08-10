@@ -4,7 +4,7 @@
 
 # lowkey · [![Docker: Build & Push](https://github.com/moonbeam-nyc/lowkey/actions/workflows/docker.yml/badge.svg)](https://github.com/moonbeam-nyc/lowkey/actions/workflows/docker.yml)
 
-Sync secrets between any supported storage types with ease.
+Sync secrets between any supported storage types with ease, and list available secrets across different storage systems.
 
 Currently supports AWS Secrets Manager, env, and json.
 
@@ -13,11 +13,22 @@ Currently supports AWS Secrets Manager, env, and json.
 **Dev team environment sharing:** Quickly sync your team's shared secrets from AWS Secrets Manager to local `.env` files, ensuring everyone has the same environment variables without manually copying credentials.
 
 ```bash
-lowkey \
+lowkey copy \
   --input-type aws-secrets-manager \
   --input-name team-dev-secrets \
   --output-type env \
   --output-name .env.dev
+```
+
+**Discovery and inventory:** List available secrets across different storage types to see what's available before copying.
+
+```bash
+# List all AWS secrets visible to your account
+lowkey list --type aws-secrets-manager --region us-east-1
+
+# List local .env files and JSON configuration files
+lowkey list --type env --path ./config
+lowkey list --type json --path ./secrets
 ```
 
 ## Installation
@@ -39,10 +50,30 @@ docker pull ghcr.io/moonbeam-nyc/lowkey:v1.1.0
 ## Usage
 
 ```bash
-lowkey --input-type <type> --input-name <name|path> --output-type <type> [options]
+lowkey <command> [options]
 ```
 
-### Options
+### Commands
+
+- `copy` - Copy secrets between different storage types
+- `list` - List available secrets for each storage type
+
+### Global Options
+
+- `--version, -v` - Show version number
+- `--help, -h` - Show help message
+
+Use `lowkey <command> --help` for more information about each command.
+
+### Copy Command
+
+Copy secrets between different storage types:
+
+```bash
+lowkey copy --input-type <type> --input-name <name|path> --output-type <type> [options]
+```
+
+#### Copy Options
 
 - `--input-type <type>` - Input source type (required)
 - `--input-name <name>` - Input source name/path (required)
@@ -51,41 +82,49 @@ lowkey --input-type <type> --input-name <name|path> --output-type <type> [option
 - `--output-name <file>` - Output file path (default: stdout)
 - `--stage <stage>` - Secret version stage (default: `AWSCURRENT`)
 - `-y, --yes` - Auto-confirm prompts (e.g., secret creation)
-- `--version, -v` - Show version number
 - `--help, -h` - Show help message
 
-### Supported Input Types
+### List Command
+
+List available secrets for each storage type:
+
+```bash
+lowkey list --type <type> [options]
+```
+
+#### List Options
+
+- `--type <type>` - Storage type to list (required)
+- `--region <region>` - AWS region (or use AWS_REGION environment variable)
+- `--path <path>` - Directory path to search for files (default: current directory)
+- `--help, -h` - Show help message
+
+### Supported Storage Types
 
 - `aws-secrets-manager` - AWS Secrets Manager
-- `json` - JSON file
-- `env` - Environment file (.env format)
-
-### Supported Output Types
-
-- `aws-secrets-manager` - AWS Secrets Manager
-- `json` - JSON file
-- `env` - Environment file (.env format)
+- `json` - JSON files (excludes standard files like package.json, tsconfig.json)
+- `env` - Environment files (.env* format)
 
 ### Examples
 
-#### CLI Usage
+#### Copy Examples
 ```bash
 # AWS Secrets Manager to env file
-lowkey \
+lowkey copy \
   --input-type aws-secrets-manager \
   --input-name my-secrets \
   --output-type env \
   --output-name .env
 
 # Convert JSON to env format
-lowkey \
+lowkey copy \
   --input-type json \
   --input-name config.json \
   --output-type env \
   --output-name .env
 
 # Upload to AWS Secrets Manager (auto-create if needed)
-lowkey \
+lowkey copy \
   --input-type env \
   --input-name .env \
   --output-type aws-secrets-manager \
@@ -93,7 +132,24 @@ lowkey \
   --yes
 ```
 
+#### List Examples
+```bash
+# List all AWS secrets in your account
+lowkey list --type aws-secrets-manager --region us-east-1
+
+# List .env files in current directory
+lowkey list --type env
+
+# List JSON configuration files in a specific directory
+lowkey list --type json --path ./config
+
+# List env files in a specific directory
+lowkey list --type env --path ./environments
+```
+
 #### Docker Usage
+
+##### Copy Examples
 ```bash
 # AWS Secrets Manager to stdout
 docker run --rm \
@@ -101,20 +157,20 @@ docker run --rm \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_REGION=us-east-1 \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
+  copy --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
 
 # Using AWS profile with volume mount
 docker run --rm \
   -v ~/.aws:/home/lowkey/.aws:ro \
   -e AWS_PROFILE=production \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  --input-type aws-secrets-manager --input-name my-secrets --output-type env
+  copy --input-type aws-secrets-manager --input-name my-secrets --output-type env
 
 # Convert local files with volume mount
 docker run --rm \
   -v $(pwd):/workspace \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  --input-type json --input-name /workspace/config.json \
+  copy --input-type json --input-name /workspace/config.json \
   --output-type env --output-name /workspace/.env
 
 # Output to local file via redirection
@@ -123,7 +179,30 @@ docker run --rm \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_REGION=us-east-1 \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  --input-type aws-secrets-manager --input-name my-secrets --output-type env > .env
+  copy --input-type aws-secrets-manager --input-name my-secrets --output-type env > .env
+```
+
+##### List Examples
+```bash
+# List AWS secrets
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_REGION=us-east-1 \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  list --type aws-secrets-manager --region us-east-1
+
+# List local files with volume mount
+docker run --rm \
+  -v $(pwd):/workspace \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  list --type env --path /workspace
+
+# List JSON files with volume mount
+docker run --rm \
+  -v $(pwd):/workspace \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  list --type json --path /workspace
 ```
 
 ## Local Development
@@ -146,8 +225,11 @@ make run-help
 # Run container and show version
 make run-version
 
-# Example usage with AWS credentials
-make run-aws ARGS="--input-type aws-secrets-manager --input-name my-secret --output-type env"
+# Example copy usage with AWS credentials
+make run-aws ARGS="copy --input-type aws-secrets-manager --input-name my-secret --output-type env"
+
+# Example list usage with AWS credentials
+make run-aws ARGS="list --type aws-secrets-manager --region us-east-1"
 
 # Clean up local images
 make clean
@@ -193,7 +275,9 @@ This tool uses the AWS SDK's default credential chain for AWS Secrets Manager. I
 - IAM roles
 - aws-vault
 
-Ensure your AWS credentials have the following permission:
+Ensure your AWS credentials have the following permissions:
+
+For copying secrets (copy command):
 ```json
 {
   "Version": "2012-10-17",
@@ -201,9 +285,27 @@ Ensure your AWS credentials have the following permission:
     {
       "Effect": "Allow",
       "Action": [
-        "secretsmanager:GetSecretValue"
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:CreateSecret"
       ],
       "Resource": "arn:aws:secretsmanager:*:*:secret:*"
+    }
+  ]
+}
+```
+
+For listing secrets (list command):
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:ListSecrets"
+      ],
+      "Resource": "*"
     }
   ]
 }
