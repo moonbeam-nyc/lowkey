@@ -38,35 +38,35 @@ function parseInspectArgs(args) {
 
 function showInspectHelp() {
   console.log(`
-Usage: lowkey inspect --type <type> --name <name> [options]
+${colorize('Usage:', 'cyan')} lowkey inspect --type <type> --name <name> [options]
 
 Inspect a secret to see its keys and optionally values.
 
-Options:
-  --type <type>            Storage type (required)
-  --name <name>            Secret name or file path (required)
-  --show-values            Show actual secret values (default: false, shows only keys)
-  --region <region>        AWS region (or use AWS_REGION environment variable)
-  --path <path>            Directory path to search for files (default: current directory)
-  --help, -h               Show this help message
+${colorize('Options:', 'cyan')}
+  ${colorize('--type <type>', 'bold')}            Storage type (required)
+  ${colorize('--name <name>', 'bold')}            Secret name or file path (required)
+  ${colorize('--show-values', 'bold')}            Show actual secret values (default: false, shows only keys)
+  ${colorize('--region <region>', 'bold')}        AWS region (or use AWS_REGION environment variable)
+  ${colorize('--path <path>', 'bold')}            Directory path to search for files (default: current directory)
+  ${colorize('--help, -h', 'bold')}               Show this help message
 
-Supported types:
-  aws-secrets-manager      Inspect AWS Secrets Manager secret
-  json                     Inspect JSON file
-  env                      Inspect environment file
+${colorize('Supported types:', 'cyan')}
+  ${colorize('aws-secrets-manager', 'bold')}      Inspect AWS Secrets Manager secret
+  ${colorize('json', 'bold')}                     Inspect JSON file
+  ${colorize('env', 'bold')}                      Inspect environment file
 
-Examples:
-  # Inspect AWS secret keys only
-  lowkey inspect --type aws-secrets-manager --name myapp-secrets
+${colorize('Examples:', 'cyan')}
+  ${colorize('# Inspect AWS secret keys only', 'gray')}
+  lowkey ${colorize('inspect', 'bold')} --type aws-secrets-manager --name myapp-secrets
 
-  # Inspect AWS secret with values
-  lowkey inspect --type aws-secrets-manager --name myapp-secrets --show-values
+  ${colorize('# Inspect AWS secret with values', 'gray')}
+  lowkey ${colorize('inspect', 'bold')} --type aws-secrets-manager --name myapp-secrets --show-values
 
-  # Inspect JSON file
-  lowkey inspect --type json --name config.json
+  ${colorize('# Inspect JSON file', 'gray')}
+  lowkey ${colorize('inspect', 'bold')} --type json --name config.json
 
-  # Inspect env file with values
-  lowkey inspect --type env --name .env.production --show-values
+  ${colorize('# Inspect env file with values', 'gray')}
+  lowkey ${colorize('inspect', 'bold')} --type env --name .env.production --show-values
 `);
 }
 

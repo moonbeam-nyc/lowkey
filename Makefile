@@ -139,3 +139,28 @@ publish-minor: ## Bump minor version and publish to npm
 .PHONY: publish-major
 publish-major: ## Bump major version and publish to npm
 	npm run publish:major
+
+# Testing commands
+.PHONY: test
+test: ## Run all tests
+	npm test
+
+.PHONY: test-watch
+test-watch: ## Run tests in watch mode
+	npm run test:watch
+
+.PHONY: test-unit
+test-unit: ## Run only unit tests
+	node --test tests/unit/**/*.test.js
+
+.PHONY: test-integration
+test-integration: ## Run only integration tests
+	node --test tests/integration/**/*.test.js
+
+.PHONY: test-coverage
+test-coverage: ## Run tests with coverage (if coverage tool is added)
+	@echo "Test coverage not yet implemented - run 'make test' for now"
+
+.PHONY: test-ci
+test-ci: test ## Run tests for CI (currently same as test)
+	@echo "✅ All tests passed for CI"

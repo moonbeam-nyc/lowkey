@@ -213,9 +213,9 @@ lowkey interactive --region us-west-2
 lowkey x --path ./config
 ```
 
-#### Docker Usage
+## Docker Usage
 
-##### Copy Examples
+### Copy Examples
 ```bash
 # AWS Secrets Manager to stdout
 docker run --rm \
@@ -238,17 +238,9 @@ docker run --rm \
   ghcr.io/moonbeam-nyc/lowkey:latest \
   copy --input-type json --input-name /workspace/config.json \
   --output-type env --output-name /workspace/.env
-
-# Output to local file via redirection
-docker run --rm \
-  -e AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY \
-  -e AWS_REGION=us-east-1 \
-  ghcr.io/moonbeam-nyc/lowkey:latest \
-  copy --input-type aws-secrets-manager --input-name my-secrets --output-type env > .env
 ```
 
-##### List Examples
+### List Examples
 ```bash
 # List AWS secrets
 docker run --rm \
@@ -263,15 +255,9 @@ docker run --rm \
   -v $(pwd):/workspace \
   ghcr.io/moonbeam-nyc/lowkey:latest \
   list --type env --path /workspace
-
-# List JSON files with volume mount
-docker run --rm \
-  -v $(pwd):/workspace \
-  ghcr.io/moonbeam-nyc/lowkey:latest \
-  list --type json --path /workspace
 ```
 
-##### Interactive Examples
+### Interactive Examples
 ```bash
 # Interactive AWS secrets browser
 docker run --rm -it \
@@ -289,51 +275,6 @@ docker run --rm -it \
 ```
 
 **Note:** Interactive mode requires the `-it` flags for Docker to provide a proper terminal interface.
-
-## Local Development
-
-### Building and Testing with Make
-
-```bash
-# Show all available commands
-make help
-
-# Build Docker image locally
-make build
-
-# Test the build works
-make test-build
-
-# Run container and show help
-make run-help
-
-# Run container and show version
-make run-version
-
-# Example copy usage with AWS credentials
-make run-aws ARGS="copy --input-type aws-secrets-manager --input-name my-secret --output-type env"
-
-# Example list usage with AWS credentials
-make run-aws ARGS="list --type aws-secrets-manager --region us-east-1"
-
-# Clean up local images
-make clean
-```
-
-### Development Commands
-
-```bash
-# Install dependencies locally
-make dev-install
-
-# Link for global CLI usage
-make dev-link
-
-# Version bumping
-make version-patch   # 1.1.0 -> 1.1.1
-make version-minor   # 1.1.0 -> 1.2.0
-make version-major   # 1.1.0 -> 2.0.0
-```
 
 ## Requirements
 
@@ -406,6 +347,25 @@ The tool will fail with clear error messages if:
 - Source type is unsupported
 - Output type is unsupported
 - Required parameters are missing
+
+## Development
+
+For development setup, testing, and contribution guidelines, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
+### Quick Start
+
+```bash
+# Install dependencies and link globally
+make dev-install
+make dev-link
+
+# Run tests
+make test
+
+# Build and test Docker image
+make build
+make test-build
+```
 
 ## Future Support
 

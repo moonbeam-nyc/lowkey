@@ -240,3 +240,18 @@ lowkey/
 ```
 
 This **modular architecture** supports easy extension for new storage types, output formats, and interactive features with **better separation of concerns** and **improved maintainability**.
+# Testing
+
+This project includes a comprehensive test suite using Node.js built-in test runner.
+
+```bash
+# Run all tests
+npm test
+
+# Run with watch mode  
+npm run test:watch
+```
+
+See [tests/README.md](tests/README.md) for detailed testing documentation.
+
+- run tests whenever we get to the end of a creation of a feature

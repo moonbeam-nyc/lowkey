@@ -1,0 +1,7 @@
+{
+  "flat_key": "valid",
+  "nested_object": {
+    "should": "fail"
+  },
+  "array_value": ["should", "also", "fail"]
+}

@@ -38,30 +38,30 @@ function parseListArgs(args) {
 
 function showListHelp() {
   console.log(`
-Usage: lowkey list --type <type> [options]
+${colorize('Usage:', 'cyan')} lowkey list --type <type> [options]
 
 List available secrets for each storage type.
 
-Options:
-  --type <type>            Storage type to list (required)
-  --region <region>        AWS region (or use AWS_REGION environment variable)
-  --path <path>            Directory path to search for files (default: current directory)
-  --help, -h               Show this help message
+${colorize('Options:', 'cyan')}
+  ${colorize('--type <type>', 'bold')}            Storage type to list (required)
+  ${colorize('--region <region>', 'bold')}        AWS region (or use AWS_REGION environment variable)
+  ${colorize('--path <path>', 'bold')}            Directory path to search for files (default: current directory)
+  ${colorize('--help, -h', 'bold')}               Show this help message
 
-Supported types:
-  aws-secrets-manager      List AWS Secrets Manager secrets visible to this account
-  json                     List *.json files
-  env                      List .env* files
+${colorize('Supported types:', 'cyan')}
+  ${colorize('aws-secrets-manager', 'bold')}      List AWS Secrets Manager secrets visible to this account
+  ${colorize('json', 'bold')}                     List *.json files
+  ${colorize('env', 'bold')}                      List .env* files
 
-Examples:
-  # List AWS secrets
-  lowkey list --type aws-secrets-manager --region us-east-1
+${colorize('Examples:', 'cyan')}
+  ${colorize('# List AWS secrets', 'gray')}
+  lowkey ${colorize('list', 'bold')} --type aws-secrets-manager --region us-east-1
 
-  # List env files in current directory
-  lowkey list --type env
+  ${colorize('# List env files in current directory', 'gray')}
+  lowkey ${colorize('list', 'bold')} --type env
 
-  # List JSON files in specific directory
-  lowkey list --type json --path ./config
+  ${colorize('# List JSON files in specific directory', 'gray')}
+  lowkey ${colorize('list', 'bold')} --type json --path ./config
 `);
 }
 

@@ -46,43 +46,43 @@ function parseCopyArgs(args) {
 
 function showCopyHelp() {
   console.log(`
-Usage: lowkey copy --input-type <type> --input-name <name|path> --output-type <type> [options]
+${colorize('Usage:', 'cyan')} lowkey copy --input-type <type> --input-name <name|path> --output-type <type> [options]
 
 Copy secrets between different storage types.
 
-Options:
-  --input-type <type>      Input source type (required)
-  --input-name <name>      Input source name/path (required)
-  --region <region>        AWS region (or use AWS_REGION environment variable)
-  --output-type <type>     Output format (required)
-  --output-name <file>     Output file path (default: stdout)
-  --stage <stage>          Secret version stage (default: AWSCURRENT)
-  -y, --yes                Auto-confirm prompts (e.g., secret creation)
-  --help, -h               Show this help message
+${colorize('Options:', 'cyan')}
+  ${colorize('--input-type <type>', 'bold')}      Input source type (required)
+  ${colorize('--input-name <name>', 'bold')}      Input source name/path (required)
+  ${colorize('--region <region>', 'bold')}        AWS region (or use AWS_REGION environment variable)
+  ${colorize('--output-type <type>', 'bold')}     Output format (required)
+  ${colorize('--output-name <file>', 'bold')}     Output file path (default: stdout)
+  ${colorize('--stage <stage>', 'bold')}          Secret version stage (default: AWSCURRENT)
+  ${colorize('-y, --yes', 'bold')}                Auto-confirm prompts (e.g., secret creation)
+  ${colorize('--help, -h', 'bold')}               Show this help message
 
-Supported types:
-  aws-secrets-manager      AWS Secrets Manager
-  json                     JSON file
-  env                      Environment file (.env format)
+${colorize('Supported types:', 'cyan')}
+  ${colorize('aws-secrets-manager', 'bold')}      AWS Secrets Manager
+  ${colorize('json', 'bold')}                     JSON file
+  ${colorize('env', 'bold')}                      Environment file (.env format)
 
-Examples:
-  # AWS Secrets Manager to stdout
-  lowkey copy --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
+${colorize('Examples:', 'cyan')}
+  ${colorize('# AWS Secrets Manager to stdout', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
 
-  # JSON file to env file
-  lowkey copy --input-type json --input-name secrets.json --output-type env --output-name .env
+  ${colorize('# JSON file to env file', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type json --input-name secrets.json --output-type env --output-name .env
 
-  # Env file to JSON
-  lowkey copy --input-type env --input-name .env --output-type json
+  ${colorize('# Env file to JSON', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type env --input-name .env --output-type json
 
-  # AWS to JSON file
-  lowkey copy --input-type aws-secrets-manager --input-name my-secrets --output-type json --output-name config.json
+  ${colorize('# AWS to JSON file', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type aws-secrets-manager --input-name my-secrets --output-type json --output-name config.json
 
-  # Upload JSON file to AWS Secrets Manager
-  lowkey copy --input-type json --input-name config.json --output-type aws-secrets-manager --output-name my-uploaded-secret
+  ${colorize('# Upload JSON file to AWS Secrets Manager', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type json --input-name config.json --output-type aws-secrets-manager --output-name my-uploaded-secret
 
-  # Auto-create secret if it doesn't exist
-  lowkey copy --input-type env --input-name .env --output-type aws-secrets-manager --output-name new-secret -y
+  ${colorize('# Auto-create secret if it doesn\'t exist', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type env --input-name .env --output-type aws-secrets-manager --output-name new-secret -y
 `);
 }
 

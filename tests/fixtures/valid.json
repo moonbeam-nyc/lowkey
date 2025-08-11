@@ -1,0 +1,10 @@
+{
+  "DATABASE_URL": "postgresql://user:pass@localhost:5432/testdb",
+  "API_KEY": "abc123def456",
+  "DEBUG": "true",
+  "PORT": "3000",
+  "SECRET_TOKEN": "value with spaces",
+  "EMPTY_VALUE": "",
+  "QUOTED_VALUE": "quoted string",
+  "SPECIAL_CHARS": "!@#$%^&*()"
+}

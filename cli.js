@@ -61,27 +61,27 @@ function showVersion() {
 
 function showHelp() {
   console.log(`
-Usage: lowkey <command> [options]
+${colorize('Usage:', 'cyan')} lowkey <command> [options]
 
-Commands:
-  copy                     Copy secrets between storage types
-  list                     List available secrets for each storage type
-  inspect                  Show help for inspecting secrets
-  interactive, x           Interactive secret browser and inspector
+${colorize('Commands:', 'cyan')}
+  ${colorize('copy', 'bold')}                     Copy secrets between storage types
+  ${colorize('list', 'bold')}                     List available secrets for each storage type
+  ${colorize('inspect', 'bold')}                  Show help for inspecting secrets
+  ${colorize('interactive, x', 'bold')}           Interactive secret browser and inspector
 
-Global Options:
-  --version, -v            Show version number
-  --help, -h               Show this help message
+${colorize('Global Options:', 'cyan')}
+  ${colorize('--version, -v', 'bold')}            Show version number
+  ${colorize('--help, -h', 'bold')}               Show this help message
 
-Use 'lowkey <command> --help' for more information about a command.
+Use ${colorize("'lowkey <command> --help'", 'bold')} for more information about a command.
 
-Examples:
-  lowkey copy --input-type env --input-name .env --output-type json
-  lowkey list --type aws-secrets-manager --region us-east-1
-  lowkey list --type env --path ./config
-  lowkey interactive                   # Interactive secret browser
-  lowkey x                            # Same as interactive (alias)
-  lowkey inspect --help               # Show inspect help
+${colorize('Examples:', 'cyan')}
+  lowkey ${colorize('copy', 'bold')} --input-type env --input-name .env --output-type json
+  lowkey ${colorize('list', 'bold')} --type aws-secrets-manager --region us-east-1
+  lowkey ${colorize('list', 'bold')} --type env --path ./config
+  lowkey ${colorize('interactive', 'bold')}                   ${colorize('# Interactive secret browser', 'gray')}
+  lowkey ${colorize('x', 'bold')}                            ${colorize('# Same as interactive (alias)', 'gray')}
+  lowkey ${colorize('inspect', 'bold')} --help               ${colorize('# Show inspect help', 'gray')}
 `);
 }
 

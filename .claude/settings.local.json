@@ -3,7 +3,11 @@
     "allow": [
       "Bash(make test-build:*)",
       "Bash(node cli.js --help)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm test)",
+      "Bash(make test-unit:*)"
     ],
     "deny": []
   }

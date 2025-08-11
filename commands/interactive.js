@@ -16,35 +16,35 @@ function parseInteractiveArgs(args) {
 
 function showInteractiveHelp() {
   console.log(`
-Usage: lowkey interactive [options]
+${colorize('Usage:', 'cyan')} lowkey interactive [options]
        lowkey x [options]
 
 Launch an interactive secret browser and inspector.
 
-Options:
-  --region <region>        AWS region (or use AWS_REGION environment variable)
-  --path <path>            Directory path to search for files (default: current directory)
-  --help, -h               Show this help message
+${colorize('Options:', 'cyan')}
+  ${colorize('--region <region>', 'bold')}        AWS region (or use AWS_REGION environment variable)
+  ${colorize('--path <path>', 'bold')}            Directory path to search for files (default: current directory)
+  ${colorize('--help, -h', 'bold')}               Show this help message
 
-Features:
+${colorize('Features:', 'cyan')}
   • Fuzzy searchable interface for browsing secrets
   • Navigate with arrow keys and type to filter
   • Toggle between showing keys only or keys with values
   • Support for AWS Secrets Manager, environment files, and JSON files
   • Breadcrumb navigation with escape key to go back
 
-Examples:
-  # Launch interactive mode
-  lowkey interactive
+${colorize('Examples:', 'cyan')}
+  ${colorize('# Launch interactive mode', 'gray')}
+  lowkey ${colorize('interactive', 'bold')}
 
-  # Short alias
-  lowkey x
+  ${colorize('# Short alias', 'gray')}
+  lowkey ${colorize('x', 'bold')}
 
-  # Specify AWS region
-  lowkey x --region us-west-2
+  ${colorize('# Specify AWS region', 'gray')}
+  lowkey ${colorize('x', 'bold')} --region us-west-2
 
-  # Search in specific directory for files
-  lowkey x --path ./config
+  ${colorize('# Search in specific directory for files', 'gray')}
+  lowkey ${colorize('x', 'bold')} --path ./config
 `);
 }
 
