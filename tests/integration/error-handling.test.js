@@ -118,7 +118,16 @@ describe('Error Handling Integration Tests', () => {
         'list',
         '--type', 'aws-secrets-manager',
         '--region', 'us-east-1'
-      ]);
+      ], {
+        env: {
+          ...process.env,
+          AWS_ACCESS_KEY_ID: 'invalid',
+          AWS_SECRET_ACCESS_KEY: 'invalid',
+          AWS_EC2_METADATA_DISABLED: 'true',  // Disable EC2 metadata lookup
+          AWS_SHARED_CREDENTIALS_FILE: '/dev/null',  // Disable credential file
+          AWS_CONFIG_FILE: '/dev/null'  // Disable config file
+        }
+      });
 
       assert.notStrictEqual(result.code, 0);
       // Should fail with credential error, not crash

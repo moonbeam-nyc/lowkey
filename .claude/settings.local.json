@@ -15,7 +15,11 @@
       "Bash(timeout:*)",
       "Bash(true)",
       "Bash(grep:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(time node:*)",
+      "Bash(time npm test:*)",
+      "Bash(time npm run test:unit:*)",
+      "Bash(time npm run test:integration:*)"
     ],
     "deny": []
   }

@@ -11,8 +11,12 @@
     "node": ">=16"
   },
   "scripts": {
-    "test": "node --test tests/**/*.test.js",
+    "test": "node --test --test-concurrency=11 tests/**/*.test.js",
+    "test:fast": "node --test --test-concurrency=11 tests/**/*.test.js",
     "test:watch": "node --test --watch tests/**/*.test.js",
+    "test:sequential": "node --test tests/**/*.test.js",
+    "test:unit": "node --test --test-concurrency=11 tests/unit/**/*.test.js",
+    "test:integration": "node --test --test-concurrency=11 tests/integration/**/*.test.js",
     "version:patch": "npm version patch",
     "version:minor": "npm version minor",
     "version:major": "npm version major",

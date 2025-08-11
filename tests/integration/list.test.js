@@ -162,7 +162,16 @@ describe('List Command Integration Tests', () => {
         'list',
         '--type', 'aws-secrets-manager',
         '--region', 'us-east-1'
-      ]);
+      ], {
+        env: {
+          ...process.env,
+          AWS_ACCESS_KEY_ID: 'invalid',
+          AWS_SECRET_ACCESS_KEY: 'invalid',
+          AWS_EC2_METADATA_DISABLED: 'true',  // Disable EC2 metadata lookup
+          AWS_SHARED_CREDENTIALS_FILE: '/dev/null',  // Disable credential file
+          AWS_CONFIG_FILE: '/dev/null'  // Disable config file
+        }
+      });
 
       // Command structure should be valid even if AWS call fails
       assert.notStrictEqual(result.code, 0);

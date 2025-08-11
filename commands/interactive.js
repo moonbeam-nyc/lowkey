@@ -50,8 +50,16 @@ ${colorize('Examples:', 'cyan')}
 }
 
 async function handleInteractiveCommand(options, searchState = {}) {
+  const { terminal } = require('../lib/terminal-utils');
   const { TerminalManager } = require('../lib/terminal-manager');
   const { TypeSelectionScreen } = require('../lib/screens');
+  
+  // Check if running in TTY environment
+  if (!terminal.isTTY()) {
+    console.error(colorize('Error: Interactive mode requires a TTY terminal environment', 'red'));
+    console.error(colorize('This command cannot be run in piped or non-interactive contexts', 'yellow'));
+    process.exit(1);
+  }
   
   try {
     const terminalManager = TerminalManager.getInstance();
