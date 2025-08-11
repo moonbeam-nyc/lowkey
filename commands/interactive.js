@@ -1,35 +1,15 @@
 const { colorize } = require('../lib/colors');
 const { runInteractiveInspect, interactiveKeyBrowser } = require('../lib/interactive');
 const { fetchSecret, parseSecretData } = require('../lib/secrets');
+const { parseCommonArgs, handleRegionFallback } = require('../lib/arg-parser');
 
 function parseInteractiveArgs(args) {
-  const options = {
-    command: 'interactive',
-    region: null,
-    path: '.'
-  };
+  const options = parseCommonArgs(args, {
+    defaults: { command: 'interactive' },
+    showHelp: showInteractiveHelp
+  });
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    
-    if (arg === '--region' && i + 1 < args.length) {
-      options.region = args[++i];
-    } else if (arg === '--path' && i + 1 < args.length) {
-      options.path = args[++i];
-    } else if (arg === '--help' || arg === '-h') {
-      showInteractiveHelp();
-      process.exit(0);
-    } else {
-      console.error(colorize(`Error: Unknown option '${arg}'`, 'red'));
-      showInteractiveHelp();
-      process.exit(1);
-    }
-  }
-
-  // If no region was specified via CLI, check environment variable
-  if (!options.region) {
-    options.region = process.env.AWS_REGION || null;
-  }
+  handleRegionFallback(options);
 
   return options;
 }

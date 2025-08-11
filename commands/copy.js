@@ -2,77 +2,41 @@ const fs = require('fs');
 const { colorize } = require('../lib/colors');
 const { fetchSecret, parseSecretData, generateOutput } = require('../lib/secrets');
 const { validateEnvKey, backupFile } = require('../lib/files');
+const { parseCommonArgs, validateRequiredArgs, validateTypes, handleRegionFallback, validateAwsRegion, createCustomArgHandler } = require('../lib/arg-parser');
 
 function parseCopyArgs(args) {
-  const options = {
-    command: 'copy',
-    inputType: null,
-    inputName: null,
-    region: null,
-    outputType: null,
-    outputName: null,
-    stage: 'AWSCURRENT',
-    autoYes: false
-  };
+  const customArgHandler = createCustomArgHandler({
+    '--input-type': { field: 'inputType', hasValue: true },
+    '--input-name': { field: 'inputName', hasValue: true },
+    '--output-type': { field: 'outputType', hasValue: true },
+    '--output-name': { field: 'outputName', hasValue: true }
+  });
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    
-    if (arg === '--input-type' && i + 1 < args.length) {
-      options.inputType = args[++i];
-    } else if (arg === '--input-name' && i + 1 < args.length) {
-      options.inputName = args[++i];
-    } else if (arg === '--region' && i + 1 < args.length) {
-      options.region = args[++i];
-    } else if (arg === '--output-type' && i + 1 < args.length) {
-      options.outputType = args[++i];
-    } else if (arg === '--output-name' && i + 1 < args.length) {
-      options.outputName = args[++i];
-    } else if (arg === '--stage' && i + 1 < args.length) {
-      options.stage = args[++i];
-    } else if (arg === '-y' || arg === '--yes') {
-      options.autoYes = true;
-    } else if (arg === '--help' || arg === '-h') {
-      showCopyHelp();
-      process.exit(0);
-    } else {
-      console.error(colorize(`Error: Unknown option '${arg}'`, 'red'));
-      showCopyHelp();
-      process.exit(1);
-    }
-  }
+  const options = parseCommonArgs(args, {
+    defaults: { command: 'copy' },
+    showHelp: showCopyHelp,
+    customArgs: customArgHandler
+  });
 
-  if (!options.inputType) {
-    console.error(colorize('Error: --input-type is required', 'red'));
+  handleRegionFallback(options);
+
+  if (!validateRequiredArgs(options, ['inputType', 'inputName', 'outputType'])) {
     showCopyHelp();
     process.exit(1);
   }
 
-  if (!options.inputName) {
-    console.error(colorize('Error: --input-name is required', 'red'));
+  const supportedTypes = ['aws-secrets-manager', 'json', 'env'];
+  if (!validateTypes(options.inputType, supportedTypes)) {
+    process.exit(1);
+  }
+
+  if (!validateTypes(options.outputType, supportedTypes)) {
+    process.exit(1);
+  }
+
+  const requiresRegion = options.inputType === 'aws-secrets-manager' || options.outputType === 'aws-secrets-manager';
+  if (!validateAwsRegion(options, requiresRegion)) {
     showCopyHelp();
-    process.exit(1);
-  }
-
-  if (!options.outputType) {
-    console.error(colorize('Error: --output-type is required', 'red'));
-    showCopyHelp();
-    process.exit(1);
-  }
-
-  if ((options.inputType === 'aws-secrets-manager' || options.outputType === 'aws-secrets-manager') && !options.region && !process.env.AWS_REGION && !process.env.AWS_DEFAULT_REGION) {
-    console.error(colorize('Error: --region is required when using aws-secrets-manager as input or output type (or set AWS_REGION/AWS_DEFAULT_REGION environment variable)', 'red'));
-    showCopyHelp();
-    process.exit(1);
-  }
-
-  if (!['aws-secrets-manager', 'json', 'env'].includes(options.inputType)) {
-    console.error(colorize(`Error: Unsupported input type '${options.inputType}'. Supported: aws-secrets-manager, json, env`, 'red'));
-    process.exit(1);
-  }
-
-  if (!['env', 'json', 'aws-secrets-manager'].includes(options.outputType)) {
-    console.error(colorize(`Error: Unsupported output type '${options.outputType}'. Supported: env, json, aws-secrets-manager`, 'red'));
     process.exit(1);
   }
 

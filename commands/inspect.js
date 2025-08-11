@@ -1,59 +1,34 @@
 const { colorize } = require('../lib/colors');
 const { fetchSecret, parseSecretData } = require('../lib/secrets');
+const { parseCommonArgs, validateRequiredArgs, validateTypes, handleRegionFallback, validateAwsRegion, createCustomArgHandler } = require('../lib/arg-parser');
 
 function parseInspectArgs(args) {
-  const options = {
-    command: 'inspect',
-    type: null,
-    name: null,
-    showValues: false,
-    region: null,
-    path: '.'
-  };
+  const customArgHandler = createCustomArgHandler({
+    '--type': { field: 'type', hasValue: true },
+    '--name': { field: 'name', hasValue: true }
+  });
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    
-    if (arg === '--type' && i + 1 < args.length) {
-      options.type = args[++i];
-    } else if (arg === '--name' && i + 1 < args.length) {
-      options.name = args[++i];
-    } else if (arg === '--show-values') {
-      options.showValues = true;
-    } else if (arg === '--region' && i + 1 < args.length) {
-      options.region = args[++i];
-    } else if (arg === '--path' && i + 1 < args.length) {
-      options.path = args[++i];
-    } else if (arg === '--help' || arg === '-h') {
-      showInspectHelp();
-      process.exit(0);
-    } else {
-      console.error(colorize(`Error: Unknown option '${arg}'. Use --help for usage information.`, 'red'));
-      showInspectHelp();
-      process.exit(1);
-    }
-  }
+  const options = parseCommonArgs(args, {
+    defaults: { command: 'inspect' },
+    showHelp: showInspectHelp,
+    customArgs: customArgHandler
+  });
 
-  if (!options.type) {
-    console.error(colorize('Error: --type is required', 'red'));
+  handleRegionFallback(options);
+
+  if (!validateRequiredArgs(options, ['type', 'name'])) {
     showInspectHelp();
     process.exit(1);
   }
 
-  if (!options.name) {
-    console.error(colorize('Error: --name is required', 'red'));
-    showInspectHelp();
+  const supportedTypes = ['aws-secrets-manager', 'json', 'env'];
+  if (!validateTypes(options.type, supportedTypes)) {
     process.exit(1);
   }
 
-  if (options.type === 'aws-secrets-manager' && !options.region && !process.env.AWS_REGION && !process.env.AWS_DEFAULT_REGION) {
-    console.error(colorize('Error: --region is required when using aws-secrets-manager (or set AWS_REGION/AWS_DEFAULT_REGION environment variable)', 'red'));
+  const requiresRegion = options.type === 'aws-secrets-manager';
+  if (!validateAwsRegion(options, requiresRegion)) {
     showInspectHelp();
-    process.exit(1);
-  }
-
-  if (!['aws-secrets-manager', 'json', 'env'].includes(options.type)) {
-    console.error(colorize(`Error: Unsupported type '${options.type}'. Supported: aws-secrets-manager, json, env`, 'red'));
     process.exit(1);
   }
 
