@@ -1,6 +1,4 @@
 const { colorize } = require('../lib/colors');
-const { runInteractiveInspect, interactiveKeyBrowser } = require('../lib/interactive');
-const { fetchSecret, parseSecretData } = require('../lib/secrets');
 const { parseCommonArgs, handleRegionFallback } = require('../lib/arg-parser');
 
 function parseInteractiveArgs(args) {
@@ -19,7 +17,7 @@ function showInteractiveHelp() {
 ${colorize('Usage:', 'cyan')} lowkey interactive [options]
        lowkey x [options]
 
-Launch an interactive secret browser and inspector.
+Launch an interactive secret browser and inspector with improved state management.
 
 ${colorize('Options:', 'cyan')}
   ${colorize('--region <region>', 'bold')}        AWS region (or use AWS_REGION environment variable)
@@ -27,6 +25,9 @@ ${colorize('Options:', 'cyan')}
   ${colorize('--help, -h', 'bold')}               Show this help message
 
 ${colorize('Features:', 'cyan')}
+  • Improved state isolation between screens
+  • Better navigation with preserved search state
+  • Enhanced error handling and recovery
   • Fuzzy searchable interface for browsing secrets
   • Navigate with arrow keys and type to filter
   • Toggle between showing keys only or keys with values
@@ -49,58 +50,54 @@ ${colorize('Examples:', 'cyan')}
 }
 
 async function handleInteractiveCommand(options, searchState = {}) {
+  const { TerminalManager } = require('../lib/terminal-manager');
+  const { TypeSelectionScreen } = require('../lib/screen');
+  
   try {
-    // Start the interactive flow immediately
-    const { options: interactiveOptions, searchState: newSearchState } = await runInteractiveInspect(options, searchState);
+    const terminalManager = TerminalManager.getInstance();
+    terminalManager.initialize();
     
     try {
-      // Fetch the secret data - map inspect options to fetchSecret format
-      const fetchOptions = {
-        inputType: interactiveOptions.type,
-        inputName: interactiveOptions.name,
-        region: interactiveOptions.region,
-        path: interactiveOptions.path
-      };
+      // Create the initial type selection screen
+      const typeScreen = new TypeSelectionScreen(options);
+      terminalManager.setRootScreen(typeScreen);
       
-      const secretString = await fetchSecret(fetchOptions);
-      const secretData = parseSecretData(secretString);
-    
-      if (typeof secretData !== 'object' || secretData === null) {
-        console.error(colorize('Error: Secret data is not in a valid key-value format', 'red'));
-        process.exit(1);
-      }
+      // Wait for the user to complete or exit the interaction
+      await waitForExit(terminalManager);
       
-      const keys = Object.keys(secretData);
-      
-      if (keys.length === 0) {
-        console.log(colorize('No keys found in the secret', 'yellow'));
-        return;
-      }
-      
-      console.log(colorize(`Found ${keys.length} key(s):`, 'green'));
-      
-      // Use interactive key browser
-      const breadcrumbs = [` ${interactiveOptions.type}`, `${interactiveOptions.name}`];
-      const result = await interactiveKeyBrowser(secretData, interactiveOptions.showValues, breadcrumbs, interactiveOptions.type, interactiveOptions.name, interactiveOptions.region);
-      
-      if (result === 'BACK') {
-        // Go back to secret selection for this type
-        const secretOptions = { 
-          ...options, 
-          type: interactiveOptions.type,
-          startStep: 'secret' // Start from secret selection instead of type selection
-        };
-        return await handleInteractiveCommand(secretOptions, newSearchState);
-      }
-      
-    } catch (error) {
-      console.error(colorize(`Error inspecting secret: ${error.message}`, 'red'));
-      process.exit(1);
+    } finally {
+      terminalManager.cleanup();
     }
+    
   } catch (error) {
-    console.error(colorize(`Fatal error in interactive command: ${error.message}`, 'red'));
+    console.error(colorize(`Error in interactive command: ${error.message}`, 'red'));
     process.exit(1);
   }
+}
+
+// Helper function to wait for the terminal interaction to complete
+async function waitForExit(terminalManager) {
+  return new Promise((resolve) => {
+    // Monitor for exit conditions
+    const checkForExit = () => {
+      if (!terminalManager.active || terminalManager.screenDepth === 0) {
+        resolve();
+        return;
+      }
+      setTimeout(checkForExit, 100); // Check every 100ms
+    };
+    
+    // Start monitoring
+    setTimeout(checkForExit, 100);
+    
+    // Also listen for process signals that might end the interaction
+    const exitHandler = () => {
+      resolve();
+    };
+    
+    process.once('SIGINT', exitHandler);
+    process.once('SIGTERM', exitHandler);
+  });
 }
 
 module.exports = {

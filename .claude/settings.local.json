@@ -7,7 +7,14 @@
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
       "Bash(npm test)",
-      "Bash(make test-unit:*)"
+      "Bash(make test-unit:*)",
+      "Bash(rm:*)",
+      "Bash(chmod:*)",
+      "Bash(mv:*)",
+      "Bash(sed:*)",
+      "Bash(timeout:*)",
+      "Bash(true)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
