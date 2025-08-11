@@ -1,6 +1,7 @@
 const { colorize } = require('../lib/colors');
 const { fetchSecret, parseSecretData } = require('../lib/secrets');
 const { parseCommonArgs, validateRequiredArgs, validateTypes, handleRegionFallback, validateAwsRegion, createCustomArgHandler } = require('../lib/arg-parser');
+const { STORAGE_TYPES } = require('../lib/constants');
 
 function parseInspectArgs(args) {
   const customArgHandler = createCustomArgHandler({
@@ -21,7 +22,7 @@ function parseInspectArgs(args) {
     process.exit(1);
   }
 
-  const supportedTypes = ['aws-secrets-manager', 'json', 'env'];
+  const supportedTypes = STORAGE_TYPES;
   if (!validateTypes(options.type, supportedTypes)) {
     process.exit(1);
   }
