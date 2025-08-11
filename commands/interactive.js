@@ -70,21 +70,6 @@ Examples:
 
 async function handleInteractiveCommand(options, searchState = {}) {
   try {
-    // Enter alternate screen buffer to preserve terminal history
-    process.stdout.write('\x1b[?1049h');
-    
-    // Ensure we restore the screen on exit
-    const restoreScreen = () => {
-      process.stdout.write('\x1b[?1049l');
-    };
-    
-    process.on('exit', restoreScreen);
-    process.on('SIGINT', () => {
-      restoreScreen();
-      process.exit(0);
-    });
-    process.on('SIGTERM', restoreScreen);
-    
     // Start the interactive flow immediately
     const { options: interactiveOptions, searchState: newSearchState } = await runInteractiveInspect(options, searchState);
     
@@ -120,8 +105,6 @@ async function handleInteractiveCommand(options, searchState = {}) {
       
       if (result === 'BACK') {
         // Go back to secret selection for this type
-        
-        
         const secretOptions = { 
           ...options, 
           type: interactiveOptions.type,
@@ -130,16 +113,11 @@ async function handleInteractiveCommand(options, searchState = {}) {
         return await handleInteractiveCommand(secretOptions, newSearchState);
       }
       
-      // Normal completion - restore screen
-      process.stdout.write('\x1b[?1049l');
-      
     } catch (error) {
-      process.stdout.write('\x1b[?1049l');
       console.error(colorize(`Error inspecting secret: ${error.message}`, 'red'));
       process.exit(1);
     }
   } catch (error) {
-    process.stdout.write('\x1b[?1049l');
     console.error(colorize(`Fatal error in interactive command: ${error.message}`, 'red'));
     process.exit(1);
   }
