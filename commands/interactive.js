@@ -51,7 +51,7 @@ ${colorize('Examples:', 'cyan')}
 
 async function handleInteractiveCommand(options, searchState = {}) {
   const { TerminalManager } = require('../lib/terminal-manager');
-  const { TypeSelectionScreen } = require('../lib/screen');
+  const { TypeSelectionScreen } = require('../lib/screens');
   
   try {
     const terminalManager = TerminalManager.getInstance();
