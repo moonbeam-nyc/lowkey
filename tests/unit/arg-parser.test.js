@@ -1,22 +1,53 @@
-const { test, describe } = require('node:test');
+const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const { 
   parseCommonArgs, 
   validateRequiredArgs, 
   validateTypes, 
   validateAwsRegion,
-  createCustomArgHandler 
+  createCustomArgHandler,
+  handleRegionFallback
 } = require('../../lib/arg-parser');
 
 describe('arg-parser.js unit tests', () => {
+  let originalEnv;
+  let originalConsoleError;
+  let originalProcessExit;
+  let consoleErrors;
+
+  beforeEach(() => {
+    // Save original environment and console
+    originalEnv = { ...process.env };
+    originalConsoleError = console.error;
+    originalProcessExit = process.exit;
+    
+    // Mock console.error to capture error messages
+    consoleErrors = [];
+    console.error = (msg) => consoleErrors.push(msg);
+    
+    // Mock process.exit to prevent test termination
+    process.exit = (code) => { throw new Error(`Process exit with code ${code}`); };
+  });
+
+  afterEach(() => {
+    // Restore original environment and console
+    process.env = originalEnv;
+    console.error = originalConsoleError;
+    process.exit = originalProcessExit;
+  });
   describe('parseCommonArgs', () => {
     test('parses basic help flag', () => {
-      const result = parseCommonArgs(['--help'], {
-        defaults: { command: 'test' },
-        showHelp: () => console.log('help')
-      });
-
-      assert.strictEqual(result.showHelp, true);
+      let helpCalled = false;
+      const mockShowHelp = () => { helpCalled = true; };
+      
+      assert.throws(() => {
+        parseCommonArgs(['--help'], {
+          defaults: { command: 'test' },
+          showHelp: mockShowHelp
+        });
+      }, /Process exit with code 0/);
+      
+      assert.strictEqual(helpCalled, true);
     });
 
     test('parses region parameter', () => {
@@ -173,20 +204,22 @@ describe('arg-parser.js unit tests', () => {
   });
 
   describe('createCustomArgHandler', () => {
-    test('creates handler that processes custom arguments', () => {
+    test('creates handler that processes individual arguments', () => {
       const handler = createCustomArgHandler({
         '--input-type': { field: 'inputType', hasValue: true },
-        '--output-type': { field: 'outputType', hasValue: true },
         '--verbose': { field: 'verbose', hasValue: false }
       });
 
       const options = {};
-      const args = ['--input-type', 'env', '--output-type', 'json', '--verbose'];
       
-      handler(args, options);
-
+      // Test argument with value
+      const result1 = handler('--input-type', ['--input-type', 'env'], 0, options);
+      assert.strictEqual(result1, 2);
       assert.strictEqual(options.inputType, 'env');
-      assert.strictEqual(options.outputType, 'json');
+      
+      // Test flag argument
+      const result2 = handler('--verbose', ['--verbose'], 0, options);
+      assert.strictEqual(result2, 1);
       assert.strictEqual(options.verbose, true);
     });
 
@@ -196,10 +229,9 @@ describe('arg-parser.js unit tests', () => {
       });
 
       const options = {};
-      const args = ['--flag'];
+      const result = handler('--flag', ['--flag'], 0, options);
       
-      handler(args, options);
-
+      assert.strictEqual(result, 1);
       assert.strictEqual(options.flag, true);
     });
 
@@ -209,10 +241,9 @@ describe('arg-parser.js unit tests', () => {
       });
 
       const options = {};
-      const args = ['--value', 'test-value'];
+      const result = handler('--value', ['--value', 'test-value'], 0, options);
       
-      handler(args, options);
-
+      assert.strictEqual(result, 2);
       assert.strictEqual(options.value, 'test-value');
     });
 
@@ -222,12 +253,218 @@ describe('arg-parser.js unit tests', () => {
       });
 
       const options = {};
-      const args = ['--known', 'value', '--unknown', 'ignored'];
       
-      handler(args, options);
-
+      // Test known argument
+      const result1 = handler('--known', ['--known', 'value'], 0, options);
+      assert.strictEqual(result1, 2);
       assert.strictEqual(options.known, 'value');
+      
+      // Test unknown argument
+      const result2 = handler('--unknown', ['--unknown', 'ignored'], 0, options);
+      assert.strictEqual(result2, false);
       assert.strictEqual(options.unknown, undefined);
+    });
+
+    test('creates handler with correct function signature', () => {
+      const argMap = {
+        '--input-name': { field: 'inputName', hasValue: true },
+        '--verbose': { field: 'verbose', hasValue: false }
+      };
+      const handler = createCustomArgHandler(argMap);
+      const options = {};
+      
+      // Test argument with value
+      const result1 = handler('--input-name', ['--input-name', 'secret-name'], 0, options);
+      assert.strictEqual(result1, 2);
+      assert.strictEqual(options.inputName, 'secret-name');
+      
+      // Test flag argument
+      const result2 = handler('--verbose', ['--verbose'], 0, options);
+      assert.strictEqual(result2, 1);
+      assert.strictEqual(options.verbose, true);
+      
+      // Test unknown argument
+      const result3 = handler('--unknown', ['--unknown'], 0, options);
+      assert.strictEqual(result3, false);
+    });
+
+    test('handles missing value for argument that requires one', () => {
+      const handler = createCustomArgHandler({
+        '--input-name': { field: 'inputName', hasValue: true }
+      });
+      const options = {};
+      
+      const result = handler('--input-name', ['--input-name'], 0, options);
+      assert.strictEqual(result, false);
+    });
+
+    test('handles custom value for flag arguments', () => {
+      const handler = createCustomArgHandler({
+        '--debug': { field: 'logLevel', hasValue: false, value: 'debug' }
+      });
+      const options = {};
+      
+      const result = handler('--debug', ['--debug'], 0, options);
+      assert.strictEqual(result, 1);
+      assert.strictEqual(options.logLevel, 'debug');
+    });
+  });
+
+  describe('parseCommonArgs - error handling and edge cases', () => {
+    test('handles unknown arguments with error', () => {
+      assert.throws(() => {
+        parseCommonArgs(['--unknown-arg']);
+      }, /Process exit with code 1/);
+      
+      assert.ok(consoleErrors.some(err => err.includes('Unknown option \'--unknown-arg\'')));
+    });
+
+    test('handles help flag with showHelp callback', () => {
+      let helpCalled = false;
+      const mockShowHelp = () => { helpCalled = true; };
+      
+      assert.throws(() => {
+        parseCommonArgs(['--help'], { showHelp: mockShowHelp });
+      }, /Process exit with code 0/);
+      
+      assert.strictEqual(helpCalled, true);
+    });
+
+    test('handles -h flag with showHelp callback', () => {
+      let helpCalled = false;
+      const mockShowHelp = () => { helpCalled = true; };
+      
+      assert.throws(() => {
+        parseCommonArgs(['-h'], { showHelp: mockShowHelp });
+      }, /Process exit with code 0/);
+      
+      assert.strictEqual(helpCalled, true);
+    });
+
+    test('handles missing value for arguments', () => {
+      assert.throws(() => {
+        parseCommonArgs(['--region']);
+      }, /Process exit with code 1/);
+    });
+
+    test('parses -y and --yes flags', () => {
+      const result1 = parseCommonArgs(['-y']);
+      assert.strictEqual(result1.autoYes, true);
+      
+      const result2 = parseCommonArgs(['--yes']);
+      assert.strictEqual(result2.autoYes, true);
+    });
+
+    test('parses --show-values flag', () => {
+      const result = parseCommonArgs(['--show-values']);
+      assert.strictEqual(result.showValues, true);
+    });
+
+    test('parses --stage argument', () => {
+      const result = parseCommonArgs(['--stage', 'production']);
+      assert.strictEqual(result.stage, 'production');
+    });
+
+    test('handles custom args with return value', () => {
+      const customHandler = (arg, args, i, options) => {
+        if (arg === '--custom') {
+          options.customValue = args[i + 1];
+          return i + 2; // Skip next argument
+        }
+        return false;
+      };
+      
+      const result = parseCommonArgs(['--custom', 'value'], { customArgs: customHandler });
+      assert.strictEqual(result.customValue, 'value');
+    });
+  });
+
+  describe('handleRegionFallback', () => {
+    test('does not override existing region', () => {
+      const options = { region: 'us-west-1' };
+      handleRegionFallback(options);
+      assert.strictEqual(options.region, 'us-west-1');
+    });
+
+    test('sets region from AWS_REGION environment variable', () => {
+      process.env.AWS_REGION = 'us-east-1';
+      const options = { region: null };
+      handleRegionFallback(options);
+      assert.strictEqual(options.region, 'us-east-1');
+    });
+
+    test('sets region from AWS_DEFAULT_REGION environment variable', () => {
+      delete process.env.AWS_REGION;
+      process.env.AWS_DEFAULT_REGION = 'us-west-2';
+      const options = { region: null };
+      handleRegionFallback(options);
+      assert.strictEqual(options.region, 'us-west-2');
+    });
+
+    test('prefers AWS_REGION over AWS_DEFAULT_REGION', () => {
+      process.env.AWS_REGION = 'us-east-1';
+      process.env.AWS_DEFAULT_REGION = 'us-west-2';
+      const options = { region: null };
+      handleRegionFallback(options);
+      assert.strictEqual(options.region, 'us-east-1');
+    });
+
+    test('leaves region null when no environment variables set', () => {
+      delete process.env.AWS_REGION;
+      delete process.env.AWS_DEFAULT_REGION;
+      const options = { region: null };
+      handleRegionFallback(options);
+      assert.strictEqual(options.region, null);
+    });
+
+    test('handles undefined region', () => {
+      delete process.env.AWS_REGION;
+      delete process.env.AWS_DEFAULT_REGION;
+      const options = { region: undefined };
+      handleRegionFallback(options);
+      assert.strictEqual(options.region, null);
+    });
+  });
+
+  describe('validateRequiredArgs - error message validation', () => {
+    test('shows correct error message for camelCase fields', () => {
+      const options = {};
+      validateRequiredArgs(options, ['inputType']);
+      assert.ok(consoleErrors.some(err => err.includes('--input-type is required')));
+    });
+
+    test('shows correct error message for multiple word fields', () => {
+      const options = {};
+      validateRequiredArgs(options, ['outputFileName']);
+      assert.ok(consoleErrors.some(err => err.includes('--output-file-name is required')));
+    });
+  });
+
+  describe('validateTypes - error message validation', () => {
+    test('shows error message with supported types', () => {
+      const supportedTypes = ['env', 'json', 'aws-secrets-manager'];
+      validateTypes('invalid', supportedTypes);
+      assert.ok(consoleErrors.some(err => 
+        err.includes('Unsupported type \'invalid\'') && 
+        err.includes('env, json, aws-secrets-manager')
+      ));
+    });
+  });
+
+  describe('validateAwsRegion - error message validation', () => {
+    test('shows helpful error message when region required but missing', () => {
+      const options = { region: null };
+      validateAwsRegion(options, true);
+      assert.ok(consoleErrors.some(err => 
+        err.includes('--region is required') && 
+        err.includes('AWS_REGION')
+      ));
+    });
+
+    test('defaults requiresRegion parameter to false', () => {
+      const options = { region: null };
+      const result = validateAwsRegion(options);
+      assert.strictEqual(result, true);
     });
   });
 });
