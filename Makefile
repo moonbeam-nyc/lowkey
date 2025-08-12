@@ -158,9 +158,13 @@ test-integration: ## Run only integration tests
 	node --test tests/integration/**/*.test.js
 
 .PHONY: test-coverage
-test-coverage: ## Run tests with coverage (if coverage tool is added)
-	@echo "Test coverage not yet implemented - run 'make test' for now"
+test-coverage: ## Run tests with coverage report
+	npm run test:coverage
+
+.PHONY: test-coverage-threshold
+test-coverage-threshold: ## Run tests with coverage and enforce 80% threshold
+	npm run test:coverage:threshold
 
 .PHONY: test-ci
-test-ci: test ## Run tests for CI (currently same as test)
-	@echo "✅ All tests passed for CI"
+test-ci: test test-coverage-threshold ## Run tests for CI with coverage requirements
+	@echo "✅ All tests passed for CI with coverage requirements"

@@ -19,7 +19,8 @@
       "Bash(time node:*)",
       "Bash(time npm test:*)",
       "Bash(time npm run test:unit:*)",
-      "Bash(time npm run test:integration:*)"
+      "Bash(time npm run test:integration:*)",
+      "Bash(make:*)"
     ],
     "deny": []
   }
