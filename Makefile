@@ -276,11 +276,11 @@ test-watch: ## Run tests in watch mode
 
 .PHONY: test-unit
 test-unit: ## Run only unit tests
-	node --test tests/unit/**/*.test.js
+	node --test tests/unit/*.test.js
 
 .PHONY: test-integration
 test-integration: ## Run only integration tests
-	node --test tests/integration/**/*.test.js
+	node --test tests/integration/*.test.js
 
 .PHONY: test-coverage
 test-coverage: ## Run tests with coverage report
