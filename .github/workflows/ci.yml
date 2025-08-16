@@ -15,9 +15,13 @@ env:
   NODE_VERSION: '22'
 
 jobs:
-  # Single comprehensive test job
+  # Comprehensive test matrix across Node.js versions
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false  # Don't cancel other matrix jobs if one fails
+      matrix:
+        node-version: [18, 20, 22]
     
     services:
       # LocalStack for AWS services emulation
@@ -40,10 +44,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
+    - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ env.NODE_VERSION }}
+        node-version: ${{ matrix.node-version }}
         cache: 'npm'
 
     - name: Install dependencies
@@ -69,15 +73,6 @@ jobs:
           --port "6443:6443@server:0"
           --k3s-arg "--disable=traefik@server:0"
           --wait
-
-    - name: Debug LocalStack container
-      if: failure()
-      run: |
-        echo "🔍 LocalStack container debugging..."
-        docker ps -a | grep localstack || echo "No LocalStack container found"
-        docker logs localstack_localstack_1 2>/dev/null || docker logs $(docker ps -aq --filter "ancestor=localstack/localstack:3.0") 2>/dev/null || echo "Could not retrieve LocalStack logs"
-        echo "LocalStack health check:"
-        curl -v http://localhost:4566/_localstack/health || true
 
     - name: Verify services are ready
       run: |
@@ -122,17 +117,24 @@ jobs:
         AWS_SECRET_ACCESS_KEY: test
         AWS_DEFAULT_REGION: us-east-1
       run: |
-        echo "🧪 Running comprehensive test suite with coverage..."
-        make test-coverage-threshold-with-setup
+        echo "🧪 Running comprehensive test suite with coverage (Node.js ${{ matrix.node-version }})..."
+        if [ "${{ matrix.node-version }}" = "22" ]; then
+          # Only run coverage with thresholds on Node.js 22 (supports threshold options)
+          make test-coverage-threshold-with-setup
+        else
+          # Run full test suite without coverage thresholds on older versions
+          make test
+        fi
 
     - name: Test Docker build
+      if: matrix.node-version == '22'  # Only test Docker build once
       run: |
         echo "🐳 Testing Docker build..."
         make build
         make run ARGS="--version"
 
     - name: Upload coverage to Codecov
-      if: success()
+      if: matrix.node-version == '22' && success()  # Only upload coverage once
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage/lcov.info
@@ -153,35 +155,3 @@ jobs:
         echo "===== k3d Status ====="
         k3d cluster list || echo "k3d not available"
         kubectl get nodes || echo "kubectl not available"
-
-  # Test compatibility on other Node.js versions
-  compatibility:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false  # Don't cancel other matrix jobs if one fails
-      matrix:
-        node-version: [18, 20, 22]
-        
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Test basic functionality
-      run: |
-        node cli.js --version
-        node cli.js --help
-        echo "TEST=value" > test.env
-        node cli.js copy --input-type env --input-name test.env --output-type json --output-name test.json
-        rm test.env test.json
-
-    - name: Run unit tests
-      run: make test-unit
