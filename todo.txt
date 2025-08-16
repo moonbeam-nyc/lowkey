@@ -1,2 +1,0 @@
-- allow each type to copy to its own type
-- make sure we have tests for copying each type to each type (incl. itself)
