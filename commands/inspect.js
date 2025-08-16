@@ -1,6 +1,6 @@
 const { colorize } = require('../lib/core/colors');
-const { fetchSecret, parseSecretData } = require('../lib/utils/secrets');
 const { CommandParser } = require('../lib/cli/command-parser');
+const { CommandHandlers } = require('../lib/cli/command-handlers');
 
 function parseInspectArgs(args) {
   const config = CommandParser.getInspectConfig(showInspectHelp);
@@ -45,15 +45,14 @@ async function handleInspectCommand(options) {
   try {
     console.error(colorize(`Inspecting ${options.type}: '${options.name}'...`, 'gray'));
     
-    // Fetch the secret data using the same format as copy command
-    const fetchOptions = {
-      inputType: options.type,
-      inputName: options.name,
-      region: options.region
-    };
+    const result = await CommandHandlers.inspectSecret(options);
     
-    const secretString = await fetchSecret(fetchOptions);
-    const secretData = parseSecretData(secretString);
+    if (!result.success) {
+      console.error(colorize(`Error: ${result.error}`, 'red'));
+      process.exit(1);
+    }
+    
+    const { data: secretData } = result;
     
     if (typeof secretData !== 'object' || secretData === null) {
       console.error(colorize('Error: Secret data is not in a valid key-value format', 'red'));

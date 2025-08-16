@@ -1,8 +1,6 @@
 const { colorize } = require('../lib/core/colors');
-const { listAwsSecrets } = require('../lib/providers/aws');
-const { listEnvFiles, listJsonFiles } = require('../lib/providers/files');
-const { checkKubectlAccess, getCurrentContext, listSecrets, getFormattedError } = require('../lib/providers/kubernetes');
 const { CommandParser } = require('../lib/cli/command-parser');
+const { CommandHandlers } = require('../lib/cli/command-handlers');
 
 function parseListArgs(args) {
   const config = CommandParser.getListConfig(showListHelp);
@@ -46,66 +44,67 @@ ${colorize('Examples:', 'cyan')}
 async function handleListCommand(options) {
   console.error(colorize(`Listing ${options.type} secrets...`, 'gray'));
   
-  switch (options.type) {
-    case 'aws-secrets-manager':
-      const secrets = await listAwsSecrets(options.region);
-      if (secrets.length === 0) {
-        console.log(colorize('No secrets found in AWS Secrets Manager', 'yellow'));
-      } else {
-        console.log(colorize(`Found ${secrets.length} secret(s):`, 'green'));
-        secrets.sort((a, b) => a.Name.localeCompare(b.Name)).forEach(secret => {
-          const lastChanged = secret.LastChangedDate ? new Date(secret.LastChangedDate).toISOString().split('T')[0] : 'Unknown';
-          console.log(`  ${colorize(secret.Name, 'bright')} ${colorize(`(last changed: ${lastChanged})`, 'gray')}`);
-        });
-      }
-      break;
-      
-    case 'env':
-      const envFiles = listEnvFiles(options.path);
-      if (envFiles.length === 0) {
-        console.log(colorize(`No .env* files found in ${options.path}`, 'yellow'));
-      } else {
-        console.log(colorize(`Found ${envFiles.length} .env file(s):`, 'green'));
-        envFiles.forEach(file => {
-          console.log(`  ${colorize(file, 'bright')}`);
-        });
-      }
-      break;
-      
-    case 'json':
-      const jsonFiles = listJsonFiles(options.path);
-      if (jsonFiles.length === 0) {
-        console.log(colorize(`No *.json files found in ${options.path}`, 'yellow'));
-      } else {
-        console.log(colorize(`Found ${jsonFiles.length} JSON file(s):`, 'green'));
-        jsonFiles.forEach(file => {
-          console.log(`  ${colorize(file, 'bright')}`);
-        });
-      }
-      break;
-      
-    case 'kubernetes':
-      try {
-        await checkKubectlAccess();
-        const context = await getCurrentContext();
-        const secrets = await listSecrets(options.namespace);
-        
-        if (secrets.length === 0) {
-          console.log(colorize(`No secrets found in namespace '${options.namespace}' (context: ${context})`, 'yellow'));
-        } else {
-          console.log(colorize(`Found ${secrets.length} secret(s) in namespace '${options.namespace}' (context: ${context}):`, 'green'));
-          secrets.forEach(secret => {
-            console.log(`  ${colorize(secret, 'bright')}`);
+  try {
+    const result = await CommandHandlers.listSecrets(options);
+    
+    if (!result.success) {
+      console.error(colorize(`Error: ${result.error}`, 'red'));
+      process.exit(1);
+    }
+    
+    const { secrets, type } = result;
+    
+    if (secrets.length === 0) {
+      const typeNames = {
+        'aws-secrets-manager': 'secrets found in AWS Secrets Manager',
+        'env': `.env* files found in ${options.path}`,
+        'json': `*.json files found in ${options.path}`,
+        'kubernetes': `secrets found in namespace '${options.namespace}'`
+      };
+      console.log(colorize(`No ${typeNames[type] || type}`, 'yellow'));
+    } else {
+      // Format output based on secret type
+      switch (type) {
+        case 'aws-secrets-manager':
+          console.log(colorize(`Found ${secrets.length} secret(s):`, 'green'));
+          secrets.sort((a, b) => a.Name.localeCompare(b.Name)).forEach(secret => {
+            const lastChanged = secret.LastChangedDate ? new Date(secret.LastChangedDate).toISOString().split('T')[0] : 'Unknown';
+            console.log(`  ${colorize(secret.Name, 'bright')} ${colorize(`(last changed: ${lastChanged})`, 'gray')}`);
           });
-        }
-      } catch (error) {
-        console.error(getFormattedError(error));
-        process.exit(1);
+          break;
+          
+        case 'kubernetes':
+          console.log(colorize(`Found ${secrets.length} secret(s) in namespace '${options.namespace}'${secrets[0]?.context ? ` (context: ${secrets[0].context})` : ''}:`, 'green'));
+          secrets.forEach(secret => {
+            console.log(`  ${colorize(secret.name || secret, 'bright')}`);
+          });
+          break;
+          
+        case 'env':
+          console.log(colorize(`Found ${secrets.length} .env file(s):`, 'green'));
+          secrets.forEach(file => {
+            console.log(`  ${colorize(file, 'bright')}`);
+          });
+          break;
+          
+        case 'json':
+          console.log(colorize(`Found ${secrets.length} JSON file(s):`, 'green'));
+          secrets.forEach(file => {
+            console.log(`  ${colorize(file, 'bright')}`);
+          });
+          break;
+          
+        default:
+          console.log(colorize(`Found ${secrets.length} ${type}(s):`, 'green'));
+          secrets.forEach(item => {
+            console.log(`  ${colorize(item.name || item, 'bright')}`);
+          });
+          break;
       }
-      break;
-      
-    default:
-      throw new Error(`Unsupported type: ${options.type}`);
+    }
+  } catch (error) {
+    console.error(colorize(`Error listing secrets: ${error.message}`, 'red'));
+    process.exit(1);
   }
 }
 
