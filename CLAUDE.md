@@ -573,4 +573,94 @@ make k3d-setup k3d-create k3d-context  # Full setup for new development
 ```
 
 The k3d cluster runs on port 6443 and is pre-configured for lowkey development and testing.
+
+# Refactoring Roadmap
+
+## Planned Refactoring Initiatives (2025)
+
+### 1. **Command Handler Unification** 🚧 *IN PROGRESS*
+**Priority**: High  
+**Problem**: Interactive and non-interactive commands duplicate core logic
+- `commands/copy.js` and `lib/screens/copy-wizard-screen.js` both handle secret copying
+- `commands/list.js` and interactive screens both list secrets  
+- `commands/inspect.js` and interactive screens both inspect secrets
+
+**Solution**: Create shared command handlers in `lib/command-handlers.js`:
+```javascript
+class CommandHandlers {
+  static async copySecret(options) {
+    // Shared copy logic used by both copy.js and copy-wizard-screen.js
+  }
+  static async listSecrets(options) {
+    // Shared list logic used by both list.js and interactive screens
+  }
+}
+```
+
+### 2. **Argument Parsing Consolidation** 📋 *PLANNED*
+**Priority**: High  
+**Problem**: Each command has similar argument parsing patterns with repeated validation logic
+
+**Solution**: Create generic command parser in `lib/command-parser.js` with command configuration objects.
+
+### 3. **Secret Operations Abstraction** 🔄 *PLANNED*
+**Priority**: Medium  
+**Problem**: Secret fetching/uploading logic scattered across `secrets.js`, `aws.js`, `kubernetes.js`
+
+**Solution**: Unified secret operations interface in `lib/secret-operations.js` with provider abstraction.
+
+### 4. **Error Handling Standardization** ⚠️ *PLANNED*
+**Priority**: Medium  
+**Problem**: Inconsistent error handling - some throw, others return error objects, different formatting
+
+**Solution**: Centralized error handling system in `lib/error-handler.js` with standardized formatting.
+
+### 5. **Configuration Management** ⚙️ *PLANNED*
+**Priority**: Low  
+**Problem**: Configuration scattered across config files, env vars, and hard-coded constants
+
+**Solution**: Centralized configuration management in `lib/config.js` with unified loading.
+
+### 6. **Terminal UI Component Reuse** 🖥️ *PLANNED*
+**Priority**: Low  
+**Problem**: Interactive screens have duplicated UI logic and rendering patterns
+
+**Solution**: Reusable UI components in `lib/ui-components.js` for common patterns.
+
+## Benefits of Refactoring
+- **Reduced Duplication**: Shared logic between interactive and non-interactive modes
+- **Easier Maintenance**: Core logic changes only need to be made in one place
+- **Better Testing**: Shared functions can be tested once and reused
+- **Easier Extension**: Adding new commands or storage types becomes simpler
+- **Improved Reliability**: Standardized error handling and validation
+
+## Commit Message Style Guide
+
+Follow this consistent commit message pattern based on project history:
+
+### Format
+- **Imperative mood**: Start with action verbs like "Add", "Fix", "Refactor", "Update", "Remove"
+- **Concise**: Short descriptions without periods or punctuation
+- **Present tense**: Describe what the commit does, not what was done
+- **Focus on what, not why**: The change itself, not the reasoning
+
+### Examples from Project History
+```
+Add interactive copy
+Fix env copy filename input  
+Refactor screens into their own files
+Add k8s copying
+Remove checkboxes from existing files
+Update claude.md
+Increase test coverage
+Add more tests
+```
+
+### Common Patterns
+- **Add**: New features, files, functionality
+- **Fix**: Bug fixes, error corrections
+- **Refactor**: Code restructuring without changing functionality
+- **Update**: Modifications to existing features
+- **Remove**: Deletion of code, features, or files
+
 - whenever i send a prompt that says "archive" and that alone, that means i want you to update the claude.md memory with any updates we've made to keep it current

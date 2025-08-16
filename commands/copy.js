@@ -1,9 +1,7 @@
-const fs = require('fs');
 const { colorize } = require('../lib/colors');
-const { fetchSecret, parseSecretData, generateOutput } = require('../lib/secrets');
-const { validateEnvKey, backupFile } = require('../lib/files');
 const { parseCommonArgs, validateRequiredArgs, validateTypes, handleRegionFallback, validateAwsRegion, createCustomArgHandler } = require('../lib/arg-parser');
 const { STORAGE_TYPES } = require('../lib/constants');
+const { CommandHandlers } = require('../lib/command-handlers');
 
 function parseCopyArgs(args) {
   const customArgHandler = createCustomArgHandler({
@@ -103,59 +101,37 @@ ${colorize('Examples:', 'cyan')}
 }
 
 async function handleCopyCommand(options) {
-  // Send progress messages to stderr so they don't interfere with stdout output
-  console.error(colorize(`Fetching data from ${options.inputType}: '${options.inputName}'...`, 'gray'));
-  const secretString = await fetchSecret(options);
-  
-  console.error(colorize('Parsing secret data...', 'gray'));
-  const secretData = parseSecretData(secretString);
-  
-  // Validate keys for env output type
-  if (options.outputType === 'env') {
-    for (const key of Object.keys(secretData)) {
-      if (!validateEnvKey(key)) {
-        throw new Error(colorize(`Invalid environment variable key: '${key}'. Keys must match pattern [A-Za-z_][A-Za-z0-9_]*`, 'red'));
-      }
+  // Map CLI options to CommandHandlers format
+  const copyOptions = {
+    inputType: options.inputType,
+    inputName: options.inputName,
+    outputType: options.outputType,
+    outputName: options.outputName,
+    region: options.region,
+    namespace: options.namespace,
+    stage: options.stage,
+    autoYes: options.autoYes,
+    onProgress: (message) => {
+      // Send progress messages to stderr so they don't interfere with stdout output
+      console.error(colorize(message, 'gray'));
     }
+  };
+
+  const result = await CommandHandlers.copySecret(copyOptions);
+
+  if (!result.success) {
+    throw new Error(colorize(result.error, 'red'));
   }
-  
-  // Handle output based on type
-  if (options.outputType === 'aws-secrets-manager') {
-    // AWS Secrets Manager requires an output name
-    if (!options.outputName) {
-      throw new Error(colorize('--output-name is required when output type is aws-secrets-manager', 'red'));
-    }
-    
-    console.error(colorize('Uploading to AWS Secrets Manager...', 'gray'));
-    const result = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes);
-    console.error(result);
-    
-  } else if (options.outputType === 'kubernetes') {
-    // Kubernetes requires an output name (secret name)
-    if (!options.outputName) {
-      throw new Error(colorize('--output-name is required when output type is kubernetes', 'red'));
-    }
-    
-    console.error(colorize('Uploading to Kubernetes...', 'gray'));
-    const result = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes, options.namespace);
-    console.error(result);
-    
-  } else {
-    // File or stdout output
-    const outputContent = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes);
-    
-    if (options.outputName) {
-      // Output to file
-      backupFile(options.outputName);
-      fs.writeFileSync(options.outputName, outputContent);
-      
-      const keyCount = Object.keys(secretData).length;
-      const itemType = options.outputType === 'env' ? 'environment variables' : 'keys';
-      console.error(colorize(`Successfully written to ${options.outputName} (${keyCount} ${itemType})`, 'green'));
-    } else {
-      // Output to stdout
-      process.stdout.write(outputContent);
-    }
+
+  // Handle different result types
+  if (result.type === 'aws-upload') {
+    console.error(result.message);
+  } else if (result.type === 'kubernetes-upload') {
+    console.error(result.message);
+  } else if (result.type === 'file-output') {
+    console.error(colorize(result.message, 'green'));
+  } else if (result.type === 'stdout-output') {
+    process.stdout.write(result.content);
   }
 }
 
