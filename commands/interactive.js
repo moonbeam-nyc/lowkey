@@ -1,15 +1,9 @@
 const { colorize } = require('../lib/colors');
-const { parseCommonArgs, handleRegionFallback } = require('../lib/arg-parser');
+const { CommandParser } = require('../lib/command-parser');
 
 function parseInteractiveArgs(args) {
-  const options = parseCommonArgs(args, {
-    defaults: { command: 'interactive' },
-    showHelp: showInteractiveHelp
-  });
-
-  handleRegionFallback(options);
-
-  return options;
+  const config = CommandParser.getInteractiveConfig(showInteractiveHelp);
+  return CommandParser.parseCommand(args, config);
 }
 
 function showInteractiveHelp() {

@@ -2,46 +2,11 @@ const { colorize } = require('../lib/colors');
 const { listAwsSecrets } = require('../lib/aws');
 const { listEnvFiles, listJsonFiles } = require('../lib/files');
 const { checkKubectlAccess, getCurrentContext, listSecrets, getFormattedError } = require('../lib/kubernetes');
-const { parseCommonArgs, validateRequiredArgs, validateTypes, handleRegionFallback, validateAwsRegion, createCustomArgHandler } = require('../lib/arg-parser');
-const { STORAGE_TYPES } = require('../lib/constants');
+const { CommandParser } = require('../lib/command-parser');
 
 function parseListArgs(args) {
-  const customArgHandler = createCustomArgHandler({
-    '--type': { field: 'type', hasValue: true },
-    '--namespace': { field: 'namespace', hasValue: true }
-  });
-
-  const options = parseCommonArgs(args, {
-    defaults: { command: 'list' },
-    showHelp: showListHelp,
-    customArgs: customArgHandler
-  });
-
-  handleRegionFallback(options);
-
-  if (!validateRequiredArgs(options, ['type'])) {
-    showListHelp();
-    process.exit(1);
-  }
-
-  const supportedTypes = STORAGE_TYPES;
-  if (!validateTypes(options.type, supportedTypes)) {
-    process.exit(1);
-  }
-
-  const requiresRegion = options.type === 'aws-secrets-manager';
-  if (!validateAwsRegion(options, requiresRegion)) {
-    showListHelp();
-    process.exit(1);
-  }
-
-  // Validate namespace for kubernetes
-  if (options.type === 'kubernetes' && !options.namespace) {
-    console.error(colorize('Error: --namespace is required when using kubernetes type', 'red'));
-    process.exit(1);
-  }
-
-  return options;
+  const config = CommandParser.getListConfig(showListHelp);
+  return CommandParser.parseCommand(args, config);
 }
 
 function showListHelp() {

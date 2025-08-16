@@ -1,52 +1,14 @@
 const { colorize } = require('../lib/colors');
-const { parseCommonArgs, validateRequiredArgs, validateTypes, handleRegionFallback, validateAwsRegion, createCustomArgHandler } = require('../lib/arg-parser');
-const { STORAGE_TYPES } = require('../lib/constants');
+const { CommandParser } = require('../lib/command-parser');
 const { CommandHandlers } = require('../lib/command-handlers');
 
 function parseCopyArgs(args) {
-  const customArgHandler = createCustomArgHandler({
-    '--input-type': { field: 'inputType', hasValue: true },
-    '--input-name': { field: 'inputName', hasValue: true },
-    '--output-type': { field: 'outputType', hasValue: true },
-    '--output-name': { field: 'outputName', hasValue: true },
-    '--namespace': { field: 'namespace', hasValue: true }
-  });
-
-  const options = parseCommonArgs(args, {
-    defaults: { command: 'copy' },
-    showHelp: showCopyHelp,
-    customArgs: customArgHandler
-  });
-
-  handleRegionFallback(options);
-
-  if (!validateRequiredArgs(options, ['inputType', 'inputName', 'outputType'])) {
-    showCopyHelp();
-    process.exit(1);
-  }
-
-  const supportedTypes = STORAGE_TYPES;
-  if (!validateTypes(options.inputType, supportedTypes)) {
-    process.exit(1);
-  }
-
-  if (!validateTypes(options.outputType, supportedTypes)) {
-    process.exit(1);
-  }
-
-  const requiresRegion = options.inputType === 'aws-secrets-manager' || options.outputType === 'aws-secrets-manager';
-  if (!validateAwsRegion(options, requiresRegion)) {
-    showCopyHelp();
-    process.exit(1);
-  }
-
-  // Validate namespace for kubernetes
-  const requiresNamespace = options.inputType === 'kubernetes' || options.outputType === 'kubernetes';
-  if (requiresNamespace && !options.namespace) {
-    console.error(colorize('Error: --namespace is required when using kubernetes type', 'red'));
-    process.exit(1);
-  }
-
+  const config = CommandParser.getCopyConfig(showCopyHelp);
+  const options = CommandParser.parseCommand(args, config);
+  
+  // Additional validation specific to copy command
+  CommandParser.validateCopyCommand(options);
+  
   return options;
 }
 
