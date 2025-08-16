@@ -6,7 +6,7 @@
 
 Sync secrets between any supported storage types with ease, and list available secrets across different storage systems.
 
-Currently supports AWS Secrets Manager, Kubernetes secrets, env, and json.
+Currently supports **AWS Secrets Manager**, **Kubernetes secrets**, **env**, and **json**.
 
 ## Use Cases
 
