@@ -140,4 +140,39 @@ describe('KeyHandlerUtils unit tests', () => {
       assert.strictEqual(typeof KeyHandlerUtils.createInteractiveBrowserKeyHandler, 'function');
     });
   });
+
+  describe('Esc key behavior with search queries', () => {
+    test('clears search query when focused on list', () => {
+      // Test that Esc clears query and shows all items when not in search mode
+      const mockTerminal = {
+        items: ['item1', 'item2', 'item3'],
+        setState: () => {}
+      };
+      
+      let capturedStateUpdate = null;
+      mockTerminal.setState = (state) => {
+        capturedStateUpdate = state;
+      };
+
+      const handler = KeyHandlerUtils.createFuzzySearchKeyHandler({
+        filteredItemsKey: 'filteredItems',
+        terminal: mockTerminal
+      });
+
+      const state = {
+        query: 'search',
+        selectedIndex: 0,
+        searchMode: false,
+        filteredItems: ['item1'] // Currently filtered
+      };
+
+      // Simulate Esc key press
+      const handled = handler('\u001b', state);
+
+      assert.strictEqual(handled, true, 'Esc key should be handled');
+      assert.strictEqual(capturedStateUpdate.query, '', 'Query should be cleared');
+      assert.strictEqual(capturedStateUpdate.selectedIndex, 0, 'Should reset to first item');
+      assert.deepStrictEqual(capturedStateUpdate.filteredItems, ['item1', 'item2', 'item3'], 'Should show all items');
+    });
+  });
 });
