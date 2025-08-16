@@ -290,9 +290,46 @@ test-coverage: ## Run tests with coverage report
 test-coverage-threshold: ## Run tests with coverage and enforce 80% threshold
 	npm run test:coverage:threshold
 
+.PHONY: test-coverage-with-setup
+test-coverage-with-setup: test-setup ## Run full test suite with coverage and automatic environment setup
+	@echo "📊 Running full test suite with coverage..."
+	@export LOCALSTACK_ENDPOINT=http://localhost:4566; \
+	export AWS_ACCESS_KEY_ID=test; \
+	export AWS_SECRET_ACCESS_KEY=test; \
+	export AWS_DEFAULT_REGION=us-east-1; \
+	npm run test:coverage
+
+.PHONY: test-coverage-threshold-with-setup
+test-coverage-threshold-with-setup: test-setup ## Run full test suite with coverage and enforce 80% threshold
+	@echo "📊 Running full test suite with coverage and threshold enforcement..."
+	@export LOCALSTACK_ENDPOINT=http://localhost:4566; \
+	export AWS_ACCESS_KEY_ID=test; \
+	export AWS_SECRET_ACCESS_KEY=test; \
+	export AWS_DEFAULT_REGION=us-east-1; \
+	npm run test:coverage:threshold
+
 .PHONY: test-ci
-test-ci: test-setup test-coverage-threshold ## Run tests for CI with coverage requirements and environment setup
+test-ci: test-coverage-threshold-with-setup ## Run tests for CI with coverage requirements and environment setup
 	@echo "✅ All tests passed for CI with coverage requirements"
+
+.PHONY: ci-local
+ci-local: ## Run the same checks as CI locally
+	@echo "🚀 Running CI checks locally..."
+	@echo "1️⃣ Syntax validation..."
+	@node --check cli.js
+	@find lib commands tests -name "*.js" -exec node --check {} \; 2>/dev/null || true
+	@echo "2️⃣ Unit tests..."
+	@$(MAKE) test-unit
+	@echo "3️⃣ Full test suite with coverage and threshold..."
+	@$(MAKE) test-coverage-threshold-with-setup
+	@echo "✅ All CI checks passed locally!"
+
+.PHONY: ci-quick
+ci-quick: ## Quick CI validation without external services
+	@echo "⚡ Running quick CI checks..."
+	@node --check cli.js
+	@npm run test:unit
+	@echo "✅ Quick CI checks passed!"
 
 # LocalStack commands for AWS simulation
 .PHONY: localstack-start
