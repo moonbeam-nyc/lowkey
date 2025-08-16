@@ -50,16 +50,15 @@ make localstack-test-list
 - `make test-localstack` - Run tests against LocalStack
 
 ### Development Commands (LocalStack Pre-configured)
-- `make localstack-interactive` - Run `lowkey interactive` with LocalStack
-- `make localstack-list` - List secrets in LocalStack
-- `make localstack-copy ARGS="..."` - Run copy command with LocalStack
-- `make localstack-inspect ARGS="..."` - Run inspect command with LocalStack  
-- `make localstack-run ARGS="..."` - Run any lowkey command with LocalStack
+- `make localstack-interactive` - Run `lowkey interactive` with LocalStack (auto-starts LocalStack)
+- `make localstack-list` - List secrets in LocalStack (auto-starts LocalStack)
+- `make localstack-copy ARGS="..."` - Run copy command with LocalStack (auto-starts LocalStack)
+- `make localstack-inspect ARGS="..."` - Run inspect command with LocalStack (auto-starts LocalStack) 
+- `make localstack-run ARGS="..."` - Run any lowkey command with LocalStack (auto-starts LocalStack)
 
 #### Example Usage:
 ```bash
-# Start LocalStack and run interactive mode
-make localstack-start
+# Just run interactive mode - LocalStack starts automatically!
 make localstack-interactive
 
 # Copy from env file to LocalStack

@@ -340,24 +340,48 @@ test-localstack: localstack-test-setup ## Run tests against LocalStack
 	@LOCALSTACK_ENDPOINT=http://localhost:4566 npm test
 	@echo "✅ LocalStack tests completed"
 
+# Helper target to ensure LocalStack is running
+.PHONY: localstack-ensure-running
+localstack-ensure-running:
+	@if ! curl -s http://localhost:4566/_localstack/health >/dev/null 2>&1; then \
+		echo "🚀 LocalStack not running, starting it..."; \
+		$(MAKE) localstack-start; \
+		echo "⏳ Waiting for LocalStack to be ready..."; \
+		for i in $$(seq 1 20); do \
+			if curl -s http://localhost:4566/_localstack/health >/dev/null 2>&1; then \
+				echo "✅ LocalStack is ready after $$((i*3)) seconds"; \
+				break; \
+			fi; \
+			if [ $$i -eq 20 ]; then \
+				echo "❌ LocalStack failed to start after 60 seconds"; \
+				exit 1; \
+			fi; \
+			printf "."; \
+			sleep 3; \
+		done; \
+		echo ""; \
+	fi
+
 # LocalStack development commands with environment pre-configured
 .PHONY: localstack-interactive
-localstack-interactive: ## Run lowkey interactive mode with LocalStack
-	@echo "🚀 Starting lowkey interactive with LocalStack..."
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 node cli.js interactive
+localstack-interactive: ## Run lowkey interactive mode with LocalStack (auto-starts LocalStack)
+	@echo "🔍 Checking if LocalStack is running..."
+	@$(MAKE) localstack-ensure-running
+	@echo "🎯 Starting lowkey interactive with LocalStack..."
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js interactive
 
 .PHONY: localstack-list
-localstack-list: ## List secrets in LocalStack
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 node cli.js list --type aws-secrets-manager --region us-east-1
+localstack-list: localstack-ensure-running ## List secrets in LocalStack (auto-starts LocalStack)
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js list --type aws-secrets-manager --region us-east-1
 
 .PHONY: localstack-copy
-localstack-copy: ## Copy secrets with LocalStack (requires ARGS)
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 node cli.js copy $(ARGS)
+localstack-copy: localstack-ensure-running ## Copy secrets with LocalStack (auto-starts LocalStack, requires ARGS)
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js copy $(ARGS)
 
 .PHONY: localstack-inspect
-localstack-inspect: ## Inspect secrets with LocalStack (requires ARGS)
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 node cli.js inspect $(ARGS)
+localstack-inspect: localstack-ensure-running ## Inspect secrets with LocalStack (auto-starts LocalStack, requires ARGS)
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js inspect $(ARGS)
 
 .PHONY: localstack-run
-localstack-run: ## Run any lowkey command with LocalStack (requires ARGS)
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 node cli.js $(ARGS)
+localstack-run: localstack-ensure-running ## Run any lowkey command with LocalStack (auto-starts LocalStack, requires ARGS)
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js $(ARGS)
