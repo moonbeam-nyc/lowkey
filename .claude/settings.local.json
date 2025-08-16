@@ -21,7 +21,8 @@
       "Bash(time npm run test:unit:*)",
       "Bash(time npm run test:integration:*)",
       "Bash(make:*)",
-      "Bash(npm run test:coverage:*)"
+      "Bash(npm run test:coverage:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "additionalDirectories": [
