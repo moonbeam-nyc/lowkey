@@ -1,6 +1,6 @@
-const { colorize } = require('../lib/colors');
-const { CommandParser } = require('../lib/command-parser');
-const { CommandHandlers } = require('../lib/command-handlers');
+const { colorize } = require('../lib/core/colors');
+const { CommandParser } = require('../lib/cli/command-parser');
+const { CommandHandlers } = require('../lib/cli/command-handlers');
 
 function parseCopyArgs(args) {
   const config = CommandParser.getCopyConfig(showCopyHelp);

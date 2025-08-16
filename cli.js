@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-const { colorize } = require('./lib/colors');
-const { ErrorHandler } = require('./lib/error-handler');
-const { config } = require('./lib/config');
+const { colorize } = require('./lib/core/colors');
+const { ErrorHandler } = require('./lib/core/error-handler');
+const { config } = require('./lib/core/config');
 const { parseCopyArgs, handleCopyCommand } = require('./commands/copy');
 const { parseListArgs, handleListCommand } = require('./commands/list');
 const { parseInspectArgs, handleInspectCommand } = require('./commands/inspect');
 const { parseInteractiveArgs, handleInteractiveCommand } = require('./commands/interactive');
-const debugLogger = require('./lib/debug-logger');
+const debugLogger = require('./lib/core/debug-logger');
 
 // Global error handlers for debugging
 process.on('uncaughtException', (error) => {

@@ -23,7 +23,9 @@
       "Bash(make:*)",
       "Bash(npm run test:coverage:*)",
       "Bash(npm test:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "additionalDirectories": [

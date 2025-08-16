@@ -1,7 +1,7 @@
 const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const { TempFileManager } = require('../helpers/temp-files');
-const { validateEnvKey, escapeEnvValue, fetchFromEnvFile } = require('../../lib/files');
+const { validateEnvKey, escapeEnvValue, fetchFromEnvFile } = require('../../lib/providers/files');
 
 describe('files.js unit tests', () => {
   let tempFiles;

@@ -17,7 +17,7 @@ describe('Kubernetes Integration Tests', () => {
 
   describe('secret data validation', () => {
     it('should validate secret data structure', () => {
-      const { validateSecretData } = require('../../lib/kubernetes');
+      const { validateSecretData } = require('../../lib/providers/kubernetes');
       
       // Valid data - flat object with string values
       const validData = {
@@ -30,7 +30,7 @@ describe('Kubernetes Integration Tests', () => {
     });
 
     it('should reject invalid secret data', () => {
-      const { validateSecretData } = require('../../lib/kubernetes');
+      const { validateSecretData } = require('../../lib/providers/kubernetes');
       
       // Invalid - nested object
       const nestedData = {
@@ -50,7 +50,7 @@ describe('Kubernetes Integration Tests', () => {
     });
 
     it('should handle empty secret data', () => {
-      const { validateSecretData } = require('../../lib/kubernetes');
+      const { validateSecretData } = require('../../lib/providers/kubernetes');
       
       // Empty object should be valid
       assert.doesNotThrow(() => validateSecretData({}));
@@ -59,7 +59,7 @@ describe('Kubernetes Integration Tests', () => {
 
   describe('error formatting', () => {
     it('should format kubectl errors properly', () => {
-      const { getFormattedError } = require('../../lib/kubernetes');
+      const { getFormattedError } = require('../../lib/providers/kubernetes');
       
       const kubectlError = new Error('kubectl command failed: namespace not found');
       const formatted = getFormattedError(kubectlError);
@@ -69,7 +69,7 @@ describe('Kubernetes Integration Tests', () => {
     });
 
     it('should handle non-kubectl errors', () => {
-      const { getFormattedError } = require('../../lib/kubernetes');
+      const { getFormattedError } = require('../../lib/providers/kubernetes');
       
       const genericError = new Error('Some other error');
       const formatted = getFormattedError(genericError);
@@ -81,7 +81,7 @@ describe('Kubernetes Integration Tests', () => {
 
   describe('namespace validation (mock tests)', () => {
     it('should test namespace existence check without kubectl', async () => {
-      const { namespaceExists } = require('../../lib/kubernetes');
+      const { namespaceExists } = require('../../lib/providers/kubernetes');
       
       // This will fail without kubectl, but we can test the error handling
       try {
@@ -96,7 +96,7 @@ describe('Kubernetes Integration Tests', () => {
 
   describe('context operations (mock tests)', () => {
     it('should test current context retrieval without kubectl', async () => {
-      const { getCurrentContext } = require('../../lib/kubernetes');
+      const { getCurrentContext } = require('../../lib/providers/kubernetes');
       
       // This will fail without kubectl, but we can test the error handling
       try {

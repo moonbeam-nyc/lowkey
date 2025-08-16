@@ -1,6 +1,6 @@
-const { colorize } = require('../lib/colors');
-const { fetchSecret, parseSecretData } = require('../lib/secrets');
-const { CommandParser } = require('../lib/command-parser');
+const { colorize } = require('../lib/core/colors');
+const { fetchSecret, parseSecretData } = require('../lib/utils/secrets');
+const { CommandParser } = require('../lib/cli/command-parser');
 
 function parseInspectArgs(args) {
   const config = CommandParser.getInspectConfig(showInspectHelp);

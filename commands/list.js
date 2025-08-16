@@ -1,8 +1,8 @@
-const { colorize } = require('../lib/colors');
-const { listAwsSecrets } = require('../lib/aws');
-const { listEnvFiles, listJsonFiles } = require('../lib/files');
-const { checkKubectlAccess, getCurrentContext, listSecrets, getFormattedError } = require('../lib/kubernetes');
-const { CommandParser } = require('../lib/command-parser');
+const { colorize } = require('../lib/core/colors');
+const { listAwsSecrets } = require('../lib/providers/aws');
+const { listEnvFiles, listJsonFiles } = require('../lib/providers/files');
+const { checkKubectlAccess, getCurrentContext, listSecrets, getFormattedError } = require('../lib/providers/kubernetes');
+const { CommandParser } = require('../lib/cli/command-parser');
 
 function parseListArgs(args) {
   const config = CommandParser.getListConfig(showListHelp);

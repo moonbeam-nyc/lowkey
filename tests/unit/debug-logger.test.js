@@ -30,7 +30,7 @@ describe('Debug Logger Unit Tests', () => {
     }
     
     // Clear module cache to get fresh logger instance
-    delete require.cache[require.resolve('../../lib/debug-logger')];
+    delete require.cache[require.resolve('../../lib/core/debug-logger')];
   });
 
   describe('logger initialization', () => {
@@ -38,7 +38,7 @@ describe('Debug Logger Unit Tests', () => {
       delete process.env.LOWKEY_DEBUG;
       delete process.env.DEBUG;
       
-      const logger = require('../../lib/debug-logger');
+      const logger = require('../../lib/core/debug-logger');
       assert.strictEqual(logger.enabled, false);
     });
 
@@ -46,11 +46,11 @@ describe('Debug Logger Unit Tests', () => {
       process.env.LOWKEY_DEBUG = 'true';
       
       // Reset config to pick up new environment variables
-      const { config } = require('../../lib/config');
+      const { config } = require('../../lib/core/config');
       config.reset();
       
-      delete require.cache[require.resolve('../../lib/debug-logger')];
-      const logger = require('../../lib/debug-logger');
+      delete require.cache[require.resolve('../../lib/core/debug-logger')];
+      const logger = require('../../lib/core/debug-logger');
       assert.strictEqual(logger.enabled, true);
     });
 
@@ -58,11 +58,11 @@ describe('Debug Logger Unit Tests', () => {
       process.env.DEBUG = 'true';
       
       // Reset config to pick up new environment variables
-      const { config } = require('../../lib/config');
+      const { config } = require('../../lib/core/config');
       config.reset();
       
-      delete require.cache[require.resolve('../../lib/debug-logger')];
-      const logger = require('../../lib/debug-logger');
+      delete require.cache[require.resolve('../../lib/core/debug-logger')];
+      const logger = require('../../lib/core/debug-logger');
       assert.strictEqual(logger.enabled, true);
     });
   });
@@ -71,8 +71,8 @@ describe('Debug Logger Unit Tests', () => {
     it('should sanitize sensitive keys', () => {
       process.env.LOWKEY_DEBUG = 'true';
       
-      delete require.cache[require.resolve('../../lib/debug-logger')];
-      const logger = require('../../lib/debug-logger');
+      delete require.cache[require.resolve('../../lib/core/debug-logger')];
+      const logger = require('../../lib/core/debug-logger');
       
       const sensitiveData = {
         username: 'john',
@@ -98,8 +98,8 @@ describe('Debug Logger Unit Tests', () => {
     it('should sanitize nested objects', () => {
       process.env.LOWKEY_DEBUG = 'true';
       
-      delete require.cache[require.resolve('../../lib/debug-logger')];
-      const logger = require('../../lib/debug-logger');
+      delete require.cache[require.resolve('../../lib/core/debug-logger')];
+      const logger = require('../../lib/core/debug-logger');
       
       const nestedData = {
         user: {
@@ -123,8 +123,8 @@ describe('Debug Logger Unit Tests', () => {
     it('should handle null and undefined values', () => {
       process.env.LOWKEY_DEBUG = 'true';
       
-      delete require.cache[require.resolve('../../lib/debug-logger')];
-      const logger = require('../../lib/debug-logger');
+      delete require.cache[require.resolve('../../lib/core/debug-logger')];
+      const logger = require('../../lib/core/debug-logger');
       
       const dataWithNulls = {
         password: null,
@@ -146,11 +146,11 @@ describe('Debug Logger Unit Tests', () => {
       delete process.env.DEBUG;
       
       // Reset config to pick up new environment variables
-      const { config } = require('../../lib/config');
+      const { config } = require('../../lib/core/config');
       config.reset();
       
-      delete require.cache[require.resolve('../../lib/debug-logger')];
-      const logger = require('../../lib/debug-logger');
+      delete require.cache[require.resolve('../../lib/core/debug-logger')];
+      const logger = require('../../lib/core/debug-logger');
       
       // Should not throw or create files
       logger.log('TEST', 'test message');
@@ -163,11 +163,11 @@ describe('Debug Logger Unit Tests', () => {
       process.env.LOWKEY_DEBUG = 'true';
       
       // Reset config to pick up new environment variables
-      const { config } = require('../../lib/config');
+      const { config } = require('../../lib/core/config');
       config.reset();
       
-      delete require.cache[require.resolve('../../lib/debug-logger')];
-      const logger = require('../../lib/debug-logger');
+      delete require.cache[require.resolve('../../lib/core/debug-logger')];
+      const logger = require('../../lib/core/debug-logger');
       
       const logPath = logger.getLogPath();
       assert.strictEqual(typeof logPath, 'string');
@@ -180,8 +180,8 @@ describe('Debug Logger Unit Tests', () => {
     it('should detect sensitive keys regardless of case', () => {
       process.env.LOWKEY_DEBUG = 'true';
       
-      delete require.cache[require.resolve('../../lib/debug-logger')];
-      const logger = require('../../lib/debug-logger');
+      delete require.cache[require.resolve('../../lib/core/debug-logger')];
+      const logger = require('../../lib/core/debug-logger');
       
       const mixedCaseData = {
         PASSWORD: 'secret1',

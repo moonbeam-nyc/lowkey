@@ -1,6 +1,6 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { KeyHandlerUtils } = require('../../lib/key-handlers');
+const { KeyHandlerUtils } = require('../../lib/interactive/key-handlers');
 
 describe('KeyHandlerUtils unit tests', () => {
   describe('isNavigationKey', () => {

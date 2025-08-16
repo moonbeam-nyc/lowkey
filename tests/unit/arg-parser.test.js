@@ -7,7 +7,7 @@ const {
   validateAwsRegion,
   createCustomArgHandler,
   handleRegionFallback
-} = require('../../lib/arg-parser');
+} = require('../../lib/cli/arg-parser');
 
 describe('arg-parser.js unit tests', () => {
   let originalEnv;
