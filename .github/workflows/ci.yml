@@ -33,8 +33,8 @@ jobs:
         options: >-
           --health-cmd="curl -f http://localhost:4566/_localstack/health || exit 1"
           --health-interval=10s
-          --health-timeout=5s
-          --health-retries=6
+          --health-timeout=10s
+          --health-retries=12
 
     steps:
     - name: Checkout code
@@ -70,10 +70,38 @@ jobs:
           --k3s-arg "--disable=traefik@server:0"
           --wait
 
+    - name: Debug LocalStack container
+      if: failure()
+      run: |
+        echo "🔍 LocalStack container debugging..."
+        docker ps -a | grep localstack || echo "No LocalStack container found"
+        docker logs localstack_localstack_1 2>/dev/null || docker logs $(docker ps -aq --filter "ancestor=localstack/localstack:3.0") 2>/dev/null || echo "Could not retrieve LocalStack logs"
+        echo "LocalStack health check:"
+        curl -v http://localhost:4566/_localstack/health || true
+
     - name: Verify services are ready
       run: |
         echo "🔍 Checking LocalStack..."
-        timeout 120 bash -c 'until curl -f http://localhost:4566/_localstack/health | grep -q "secretsmanager.*running"; do echo "Waiting for LocalStack..."; sleep 3; done'
+        echo "LocalStack container status:"
+        docker ps | grep localstack || echo "No running LocalStack container"
+        
+        echo "Testing LocalStack connectivity..."
+        curl -v http://localhost:4566/_localstack/health || {
+          echo "❌ LocalStack health endpoint not responding"
+          echo "Container logs:"
+          docker logs localstack_localstack_1 2>/dev/null || docker logs $(docker ps -aq --filter "ancestor=localstack/localstack:3.0") 2>/dev/null || echo "Could not retrieve logs"
+          exit 1
+        }
+        
+        echo "Waiting for SecretManager service..."
+        timeout 180 bash -c 'until curl -f http://localhost:4566/_localstack/health | grep -q "secretsmanager.*running"; do echo "Waiting for LocalStack SecretManager... ($(date))"; sleep 5; done' || {
+          echo "❌ LocalStack SecretManager service failed to start"
+          echo "Final health status:"
+          curl -s http://localhost:4566/_localstack/health | jq . || curl -s http://localhost:4566/_localstack/health
+          echo "Container logs:"
+          docker logs localstack_localstack_1 2>/dev/null || docker logs $(docker ps -aq --filter "ancestor=localstack/localstack:3.0") 2>/dev/null || echo "Could not retrieve logs"
+          exit 1
+        }
         echo "✅ LocalStack is ready!"
         
         echo "🔍 Checking k3d cluster..."
@@ -105,10 +133,27 @@ jobs:
         file: ./coverage/lcov.info
         fail_ci_if_error: false
 
+    - name: Debug on failure
+      if: failure()
+      run: |
+        echo "🔍 Job failed - collecting debug information..."
+        echo "===== LocalStack Status ====="
+        docker ps -a | grep localstack || echo "No LocalStack containers"
+        echo "===== LocalStack Logs ====="
+        docker logs localstack_localstack_1 2>/dev/null || docker logs $(docker ps -aq --filter "ancestor=localstack/localstack:3.0") 2>/dev/null || echo "Could not retrieve LocalStack logs"
+        echo "===== LocalStack Health ====="
+        curl -s http://localhost:4566/_localstack/health | jq . 2>/dev/null || curl -s http://localhost:4566/_localstack/health || echo "Health endpoint not accessible"
+        echo "===== Network Status ====="
+        netstat -tlnp | grep 4566 || echo "Port 4566 not listening"
+        echo "===== k3d Status ====="
+        k3d cluster list || echo "k3d not available"
+        kubectl get nodes || echo "kubectl not available"
+
   # Test compatibility on other Node.js versions
   compatibility:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false  # Don't cancel other matrix jobs if one fails
       matrix:
         node-version: [16, 20]
         
