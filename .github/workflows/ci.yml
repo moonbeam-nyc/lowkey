@@ -94,7 +94,7 @@ jobs:
         }
         
         echo "Waiting for SecretManager service..."
-        timeout 180 bash -c 'until curl -f http://localhost:4566/_localstack/health | grep -q "secretsmanager.*running"; do echo "Waiting for LocalStack SecretManager... ($(date))"; sleep 5; done' || {
+        timeout 180 bash -c 'until curl -f http://localhost:4566/_localstack/health | grep -q "secretsmanager.*\(available\|running\)"; do echo "Waiting for LocalStack SecretManager... ($(date))"; sleep 5; done' || {
           echo "❌ LocalStack SecretManager service failed to start"
           echo "Final health status:"
           curl -s http://localhost:4566/_localstack/health | jq . || curl -s http://localhost:4566/_localstack/health
@@ -102,6 +102,12 @@ jobs:
           docker logs localstack_localstack_1 2>/dev/null || docker logs $(docker ps -aq --filter "ancestor=localstack/localstack:3.0") 2>/dev/null || echo "Could not retrieve logs"
           exit 1
         }
+        
+        echo "Triggering SecretManager service initialization..."
+        AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
+          aws --endpoint-url=http://localhost:4566 secretsmanager list-secrets || \
+          curl -X POST "http://localhost:4566/moto-api/reset" || true
+        
         echo "✅ LocalStack is ready!"
         
         echo "🔍 Checking k3d cluster..."
