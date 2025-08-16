@@ -20,20 +20,6 @@ lowkey copy \
   --output-name .env.dev
 ```
 
-**Discovery and inventory:** List available secrets across different storage types.
-
-```bash
-# List all AWS secrets visible to your account
-lowkey list --type aws-secrets-manager --region us-east-1
-
-# List Kubernetes secrets in current namespace
-lowkey list --type kubernetes
-
-# List local .env files and JSON configuration files
-lowkey list --type env --path ./config
-lowkey list --type json --path ./secrets
-```
-
 **Frequent environment updates:** Browse and edit environment variables with fuzzy search and live editing.
 
 ```bash
@@ -69,8 +55,7 @@ lowkey <command> [options]
 
 <details>
 <summary><strong>copy</strong> - Copy secrets between different storage types</summary>
-
-Copy secrets between different storage types:
+<br>
 
 ```bash
 lowkey copy --input-type <type> --input-name <name|path> --output-type <type> [options]
@@ -126,8 +111,7 @@ lowkey copy \
 
 <details>
 <summary><strong>list</strong> - List available secrets for each storage type</summary>
-
-List available secrets for each storage type:
+<br>
 
 ```bash
 lowkey list --type <type> [options]
@@ -164,8 +148,7 @@ lowkey list --type kubernetes --namespace production
 
 <details>
 <summary><strong>inspect</strong> - Inspect secrets to see keys and values</summary>
-
-Inspect a secret to see its keys and optionally values:
+<br>
 
 ```bash
 lowkey inspect --type <type> --name <name> [options]
@@ -200,8 +183,7 @@ lowkey inspect --type env --name .env.production --show-values
 
 <details>
 <summary><strong>interactive, x</strong> - Interactive secret browser with editing capabilities</summary>
-
-Launch an interactive secret browser and inspector with fuzzy search and editing capabilities:
+<br>
 
 ```bash
 lowkey interactive [options]
@@ -346,41 +328,7 @@ This tool uses the AWS SDK's default credential chain for AWS Secrets Manager. I
 - IAM roles
 - aws-vault
 
-Ensure your AWS credentials have the following permissions:
-
-For copying secrets (copy command):
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "secretsmanager:GetSecretValue",
-        "secretsmanager:PutSecretValue",
-        "secretsmanager:CreateSecret"
-      ],
-      "Resource": "arn:aws:secretsmanager:*:*:secret:*"
-    }
-  ]
-}
-```
-
-For listing secrets (list command):
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "secretsmanager:ListSecrets"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
+Ensure your AWS credentials have the appropriate permissions for the commands you want to use.
 
 ### Kubernetes Authentication
 
