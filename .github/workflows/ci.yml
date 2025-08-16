@@ -175,8 +175,8 @@ jobs:
         node cli.js --version
         node cli.js --help
         echo "TEST=value" > test.env
-        node cli.js copy --input-type env --input-name test.env --output-type json
-        rm test.env
+        node cli.js copy --input-type env --input-name test.env --output-type json --output-name test.json
+        rm test.env test.json
 
     - name: Run unit tests
       run: make test-unit
