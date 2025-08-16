@@ -1,15 +1,9 @@
-const { colorize } = require('../lib/colors');
-const { parseCommonArgs, handleRegionFallback } = require('../lib/arg-parser');
+const { colorize } = require('../lib/core/colors');
+const { CommandParser } = require('../lib/cli/command-parser');
 
 function parseInteractiveArgs(args) {
-  const options = parseCommonArgs(args, {
-    defaults: { command: 'interactive' },
-    showHelp: showInteractiveHelp
-  });
-
-  handleRegionFallback(options);
-
-  return options;
+  const config = CommandParser.getInteractiveConfig(showInteractiveHelp);
+  return CommandParser.parseCommand(args, config);
 }
 
 function showInteractiveHelp() {
@@ -50,9 +44,9 @@ ${colorize('Examples:', 'cyan')}
 }
 
 async function handleInteractiveCommand(options, searchState = {}) {
-  const { terminal } = require('../lib/terminal-utils');
-  const { TerminalManager } = require('../lib/terminal-manager');
-  const { TypeSelectionScreen } = require('../lib/screens');
+  const { terminal } = require('../lib/interactive/terminal-utils');
+  const { TerminalManager } = require('../lib/interactive/terminal-manager');
+  const { TypeSelectionScreen } = require('../lib/interactive/screens');
   
   // Check if running in TTY environment
   if (!terminal.isTTY()) {

@@ -14,6 +14,8 @@ RUN npm ci --only=production
 COPY cli.js ./
 COPY LICENSE ./
 COPY README.md ./
+COPY lib/ ./lib/
+COPY commands/ ./commands/
 COPY static/ ./static/
 
 # Create a non-root user

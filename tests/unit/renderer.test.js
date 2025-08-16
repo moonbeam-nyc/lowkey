@@ -1,6 +1,6 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { RenderUtils } = require('../../lib/renderer');
+const { RenderUtils } = require('../../lib/interactive/renderer');
 
 describe('RenderUtils unit tests', () => {
   describe('calculateAvailableHeight', () => {

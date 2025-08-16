@@ -7,7 +7,8 @@ const {
   validateAwsRegion,
   createCustomArgHandler,
   handleRegionFallback
-} = require('../../lib/arg-parser');
+} = require('../../lib/cli/arg-parser');
+const { config } = require('../../lib/core/config');
 
 describe('arg-parser.js unit tests', () => {
   let originalEnv;
@@ -380,6 +381,31 @@ describe('arg-parser.js unit tests', () => {
   });
 
   describe('handleRegionFallback', () => {
+    let originalAwsRegion, originalAwsDefaultRegion;
+    
+    beforeEach(() => {
+      // Save original environment variables
+      originalAwsRegion = process.env.AWS_REGION;
+      originalAwsDefaultRegion = process.env.AWS_DEFAULT_REGION;
+    });
+    
+    afterEach(() => {
+      // Restore original environment variables
+      if (originalAwsRegion !== undefined) {
+        process.env.AWS_REGION = originalAwsRegion;
+      } else {
+        delete process.env.AWS_REGION;
+      }
+      if (originalAwsDefaultRegion !== undefined) {
+        process.env.AWS_DEFAULT_REGION = originalAwsDefaultRegion;
+      } else {
+        delete process.env.AWS_DEFAULT_REGION;
+      }
+      
+      // Reload config to pick up environment changes
+      config.reloadEnvironment();
+    });
+
     test('does not override existing region', () => {
       const options = { region: 'us-west-1' };
       handleRegionFallback(options);
@@ -387,7 +413,9 @@ describe('arg-parser.js unit tests', () => {
     });
 
     test('sets region from AWS_REGION environment variable', () => {
+      delete process.env.AWS_DEFAULT_REGION;
       process.env.AWS_REGION = 'us-east-1';
+      config.reloadEnvironment();
       const options = { region: null };
       handleRegionFallback(options);
       assert.strictEqual(options.region, 'us-east-1');
@@ -396,6 +424,7 @@ describe('arg-parser.js unit tests', () => {
     test('sets region from AWS_DEFAULT_REGION environment variable', () => {
       delete process.env.AWS_REGION;
       process.env.AWS_DEFAULT_REGION = 'us-west-2';
+      config.reloadEnvironment();
       const options = { region: null };
       handleRegionFallback(options);
       assert.strictEqual(options.region, 'us-west-2');
@@ -404,6 +433,7 @@ describe('arg-parser.js unit tests', () => {
     test('prefers AWS_REGION over AWS_DEFAULT_REGION', () => {
       process.env.AWS_REGION = 'us-east-1';
       process.env.AWS_DEFAULT_REGION = 'us-west-2';
+      config.reloadEnvironment();
       const options = { region: null };
       handleRegionFallback(options);
       assert.strictEqual(options.region, 'us-east-1');
@@ -412,6 +442,7 @@ describe('arg-parser.js unit tests', () => {
     test('leaves region null when no environment variables set', () => {
       delete process.env.AWS_REGION;
       delete process.env.AWS_DEFAULT_REGION;
+      config.reloadEnvironment();
       const options = { region: null };
       handleRegionFallback(options);
       assert.strictEqual(options.region, null);
@@ -420,6 +451,7 @@ describe('arg-parser.js unit tests', () => {
     test('handles undefined region', () => {
       delete process.env.AWS_REGION;
       delete process.env.AWS_DEFAULT_REGION;
+      config.reloadEnvironment();
       const options = { region: undefined };
       handleRegionFallback(options);
       assert.strictEqual(options.region, null);

@@ -120,9 +120,11 @@ describe('Error Handling Integration Tests', () => {
         '--region', 'us-east-1'
       ], {
         env: {
-          ...process.env,
+          // Clear LocalStack environment and use invalid credentials to test real AWS failure
+          LOCALSTACK_ENDPOINT: undefined,
           AWS_ACCESS_KEY_ID: 'invalid',
           AWS_SECRET_ACCESS_KEY: 'invalid',
+          AWS_REGION: 'us-east-1',
           AWS_EC2_METADATA_DISABLED: 'true',  // Disable EC2 metadata lookup
           AWS_SHARED_CREDENTIALS_FILE: '/dev/null',  // Disable credential file
           AWS_CONFIG_FILE: '/dev/null'  // Disable config file
@@ -139,7 +141,14 @@ describe('Error Handling Integration Tests', () => {
         'list',
         '--type', 'aws-secrets-manager'
         // Missing --region parameter
-      ]);
+      ], {
+        env: {
+          // Clear region environment variables to test missing region validation
+          AWS_REGION: undefined,
+          AWS_DEFAULT_REGION: undefined,
+          LOCALSTACK_ENDPOINT: undefined
+        }
+      });
 
       assert.notStrictEqual(result.code, 0);
       assert.ok(result.stderr.includes('region') || result.stdout.includes('Usage:'));

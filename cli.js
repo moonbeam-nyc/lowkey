@@ -1,21 +1,42 @@
 #!/usr/bin/env node
 
-const { colorize } = require('./lib/colors');
+const { colorize } = require('./lib/core/colors');
+const { ErrorHandler } = require('./lib/core/error-handler');
+const { config } = require('./lib/core/config');
 const { parseCopyArgs, handleCopyCommand } = require('./commands/copy');
 const { parseListArgs, handleListCommand } = require('./commands/list');
 const { parseInspectArgs, handleInspectCommand } = require('./commands/inspect');
 const { parseInteractiveArgs, handleInteractiveCommand } = require('./commands/interactive');
+const debugLogger = require('./lib/core/debug-logger');
 
 // Global error handlers for debugging
 process.on('uncaughtException', (error) => {
-  console.error('\x1b[31mUNCAUGHT EXCEPTION:\x1b[0m', error.message);
-  console.error('Stack:', error.stack);
+  debugLogger.error('CLI', 'UNCAUGHT EXCEPTION', error);
+  
+  // Don't pollute interactive mode with debug output
+  const isInteractive = debugLogger.isInteractiveMode();
+  if (!isInteractive) {
+    console.error('\x1b[31mUNCAUGHT EXCEPTION:\x1b[0m', error.message);
+    console.error('Stack:', error.stack);
+    if (process.env.LOWKEY_DEBUG === 'true') {
+      console.error('Debug log saved to:', debugLogger.getLogPath());
+    }
+  }
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('\x1b[31mUNHANDLED REJECTION:\x1b[0m', reason);
-  console.error('Promise:', promise);
+  debugLogger.error('CLI', 'UNHANDLED REJECTION', reason);
+  
+  // Don't pollute interactive mode with debug output
+  const isInteractive = debugLogger.isInteractiveMode();
+  if (!isInteractive) {
+    console.error('\x1b[31mUNHANDLED REJECTION:\x1b[0m', reason);
+    console.error('Promise:', promise);
+    if (process.env.LOWKEY_DEBUG === 'true') {
+      console.error('Debug log saved to:', debugLogger.getLogPath());
+    }
+  }
   process.exit(1);
 });
 
@@ -86,8 +107,14 @@ ${colorize('Examples:', 'cyan')}
 }
 
 async function main() {
+  // Initialize configuration early
+  config.initialize();
+  
+  debugLogger.log('CLI', 'Starting lowkey', { argv: process.argv });
+  
   try {
     const options = parseArgs();
+    debugLogger.log('CLI', 'Parsed options', options);
     
     if (options.command === 'copy') {
       await handleCopyCommand(options);

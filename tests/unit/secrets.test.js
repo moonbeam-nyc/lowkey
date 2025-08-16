@@ -1,6 +1,6 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { parseSecretData, generateEnvContent, generateJsonContent } = require('../../lib/secrets');
+const { parseSecretData, generateEnvContent, generateJsonContent } = require('../../lib/utils/secrets');
 
 describe('secrets.js unit tests', () => {
   describe('parseSecretData', () => {
