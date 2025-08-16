@@ -7,8 +7,9 @@ const path = require('path');
 function runLowkeyCommand(args, options = {}) {
   return new Promise((resolve, reject) => {
     const cliPath = path.join(__dirname, '../../cli.js');
-    const child = spawn('node', [cliPath, ...args], {
+    const child = spawn(process.execPath, [cliPath, ...args], {
       stdio: 'pipe',
+      env: { ...process.env, ...(options.env || {}) },
       ...options
     });
 

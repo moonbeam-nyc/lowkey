@@ -250,8 +250,8 @@ log-list: ## List all debug log files
 
 # Testing commands
 .PHONY: test
-test: ## Run all tests
-	npm test
+test: ## Run all tests including LocalStack AWS tests
+	$(MAKE) test-localstack
 
 .PHONY: test-watch
 test-watch: ## Run tests in watch mode
@@ -282,7 +282,7 @@ test-ci: test test-coverage-threshold ## Run tests for CI with coverage requirem
 localstack-start: ## Start LocalStack for AWS simulation
 	docker compose -f docker-compose.localstack.yml up -d
 	@echo "✅ LocalStack started on http://localhost:4566"
-	@echo "Wait ~30 seconds for services to be ready, then check: make localstack-status"
+	@echo "Use 'make localstack-status' to check if services are ready"
 
 .PHONY: localstack-stop
 localstack-stop: ## Stop LocalStack
@@ -311,34 +311,54 @@ localstack-clean: localstack-stop ## Stop LocalStack and clean up volumes
 .PHONY: localstack-test-setup
 localstack-test-setup: localstack-start ## Start LocalStack and create test secrets
 	@echo "Waiting for LocalStack to be ready..."
-	@sleep 30
-	@echo "Creating test secrets..."
-	@docker run --rm --network lowkey-network \
-		-e AWS_ACCESS_KEY_ID=test \
-		-e AWS_SECRET_ACCESS_KEY=test \
-		-e AWS_DEFAULT_REGION=us-east-1 \
-		amazon/aws-cli:latest \
-		--endpoint-url=http://localstack:4566 \
-		secretsmanager create-secret \
+	@for i in $$(seq 1 20); do \
+		if curl -s http://localhost:4566/_localstack/health >/dev/null 2>&1; then \
+			echo "✅ LocalStack is ready after $$((i*3)) seconds"; \
+			break; \
+		fi; \
+		if [ $$i -eq 20 ]; then \
+			echo "❌ LocalStack failed to start after 60 seconds"; \
+			exit 1; \
+		fi; \
+		printf "."; \
+		sleep 3; \
+	done; \
+	echo ""; \
+	echo "Creating test secrets..."
+	@docker compose -f docker-compose.localstack.yml exec -T localstack \
+		awslocal secretsmanager delete-secret --secret-id test-secret --force-delete-without-recovery >/dev/null 2>&1 || true
+	@docker compose -f docker-compose.localstack.yml exec -T localstack \
+		awslocal secretsmanager create-secret \
 		--name test-secret \
 		--secret-string '{"username":"testuser","password":"testpass","api_key":"test123"}' || true
 	@echo "✅ Test environment ready"
 
 .PHONY: localstack-test-list
 localstack-test-list: ## List secrets in LocalStack
-	@docker run --rm --network lowkey-network \
-		-e AWS_ACCESS_KEY_ID=test \
-		-e AWS_SECRET_ACCESS_KEY=test \
-		-e AWS_DEFAULT_REGION=us-east-1 \
-		amazon/aws-cli:latest \
-		--endpoint-url=http://localstack:4566 \
-		secretsmanager list-secrets
+	@docker compose -f docker-compose.localstack.yml exec -T localstack \
+		awslocal secretsmanager list-secrets
 
 .PHONY: test-localstack
 test-localstack: localstack-test-setup ## Run tests against LocalStack
 	@echo "Running tests with LocalStack..."
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 npm test
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 \
+	 AWS_ACCESS_KEY_ID=test \
+	 AWS_SECRET_ACCESS_KEY=test \
+	 AWS_REGION=us-east-1 \
+	 NODE_ENV=test \
+	 npm test
 	@echo "✅ LocalStack tests completed"
+
+.PHONY: test-aws
+test-aws: localstack-test-setup ## Run only AWS copy tests against LocalStack
+	@echo "Running AWS copy tests with LocalStack..."
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 \
+	 AWS_ACCESS_KEY_ID=test \
+	 AWS_SECRET_ACCESS_KEY=test \
+	 AWS_REGION=us-east-1 \
+	 NODE_ENV=test \
+	 node --test tests/integration/copy-aws.test.js
+	@echo "✅ AWS copy tests completed"
 
 # Helper target to ensure LocalStack is running
 .PHONY: localstack-ensure-running
@@ -368,20 +388,20 @@ localstack-interactive: ## Run lowkey interactive mode with LocalStack (auto-sta
 	@echo "🔍 Checking if LocalStack is running..."
 	@$(MAKE) localstack-ensure-running
 	@echo "🎯 Starting lowkey interactive with LocalStack..."
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js interactive
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_REGION=us-east-1 node cli.js interactive
 
 .PHONY: localstack-list
 localstack-list: localstack-ensure-running ## List secrets in LocalStack (auto-starts LocalStack)
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js list --type aws-secrets-manager --region us-east-1
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_REGION=us-east-1 node cli.js list --type aws-secrets-manager --region us-east-1
 
 .PHONY: localstack-copy
 localstack-copy: localstack-ensure-running ## Copy secrets with LocalStack (auto-starts LocalStack, requires ARGS)
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js copy $(ARGS)
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_REGION=us-east-1 node cli.js copy $(ARGS)
 
 .PHONY: localstack-inspect
 localstack-inspect: localstack-ensure-running ## Inspect secrets with LocalStack (auto-starts LocalStack, requires ARGS)
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js inspect $(ARGS)
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_REGION=us-east-1 node cli.js inspect $(ARGS)
 
 .PHONY: localstack-run
 localstack-run: localstack-ensure-running ## Run any lowkey command with LocalStack (auto-starts LocalStack, requires ARGS)
-	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_DEFAULT_REGION=us-east-1 node cli.js $(ARGS)
+	@LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_REGION=us-east-1 node cli.js $(ARGS)
