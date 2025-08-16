@@ -45,6 +45,10 @@ describe('Debug Logger Unit Tests', () => {
     it('should be enabled when LOWKEY_DEBUG=true', () => {
       process.env.LOWKEY_DEBUG = 'true';
       
+      // Reset config to pick up new environment variables
+      const { config } = require('../../lib/config');
+      config.reset();
+      
       delete require.cache[require.resolve('../../lib/debug-logger')];
       const logger = require('../../lib/debug-logger');
       assert.strictEqual(logger.enabled, true);
@@ -52,6 +56,10 @@ describe('Debug Logger Unit Tests', () => {
 
     it('should be enabled when DEBUG=true', () => {
       process.env.DEBUG = 'true';
+      
+      // Reset config to pick up new environment variables
+      const { config } = require('../../lib/config');
+      config.reset();
       
       delete require.cache[require.resolve('../../lib/debug-logger')];
       const logger = require('../../lib/debug-logger');
@@ -137,6 +145,10 @@ describe('Debug Logger Unit Tests', () => {
       delete process.env.LOWKEY_DEBUG;
       delete process.env.DEBUG;
       
+      // Reset config to pick up new environment variables
+      const { config } = require('../../lib/config');
+      config.reset();
+      
       delete require.cache[require.resolve('../../lib/debug-logger')];
       const logger = require('../../lib/debug-logger');
       
@@ -149,6 +161,10 @@ describe('Debug Logger Unit Tests', () => {
 
     it('should return valid log path when enabled', () => {
       process.env.LOWKEY_DEBUG = 'true';
+      
+      // Reset config to pick up new environment variables
+      const { config } = require('../../lib/config');
+      config.reset();
       
       delete require.cache[require.resolve('../../lib/debug-logger')];
       const logger = require('../../lib/debug-logger');

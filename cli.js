@@ -2,6 +2,7 @@
 
 const { colorize } = require('./lib/colors');
 const { ErrorHandler } = require('./lib/error-handler');
+const { config } = require('./lib/config');
 const { parseCopyArgs, handleCopyCommand } = require('./commands/copy');
 const { parseListArgs, handleListCommand } = require('./commands/list');
 const { parseInspectArgs, handleInspectCommand } = require('./commands/inspect');
@@ -106,6 +107,9 @@ ${colorize('Examples:', 'cyan')}
 }
 
 async function main() {
+  // Initialize configuration early
+  config.initialize();
+  
   debugLogger.log('CLI', 'Starting lowkey', { argv: process.argv });
   
   try {
