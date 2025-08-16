@@ -21,7 +21,6 @@ jobs:
     strategy:
       fail-fast: false  # Don't cancel other matrix jobs if one fails
       matrix:
-        node-version: [18, 20, 22]
         include:
           - node-version: 18
             name: node18
@@ -29,7 +28,7 @@ jobs:
             name: node20
           - node-version: 22
             name: node22
-    name: ${{ matrix.name }}
+    name: all-tests (${{ matrix.name }})
     
     services:
       # LocalStack for AWS services emulation
