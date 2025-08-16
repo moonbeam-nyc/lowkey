@@ -260,20 +260,20 @@ lowkey x --path ./config
 <summary><strong>copy</strong></summary>
 
 ```bash
-# AWS Secrets Manager to stdout
+# Inspect AWS secret contents
 docker run --rm \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_REGION=us-east-1 \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  copy --input-type aws-secrets-manager --input-name my-app-secrets --output-type env
+  inspect --type aws-secrets-manager --name my-app-secrets --show-values
 
 # Using AWS profile with volume mount
 docker run --rm \
   -v ~/.aws:/home/lowkey/.aws:ro \
   -e AWS_PROFILE=production \
   ghcr.io/moonbeam-nyc/lowkey:latest \
-  copy --input-type aws-secrets-manager --input-name my-secrets --output-type env
+  inspect --type aws-secrets-manager --name my-secrets --show-values
 
 # Convert local files with volume mount
 docker run --rm \
