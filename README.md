@@ -253,10 +253,6 @@ lowkey x --path ./config
 
 </details>
 
-## Docker Usage
-
-For detailed Docker usage examples and volume mounting instructions, see [DOCKER.md](DOCKER.md).
-
 ## Authentication
 
 ### AWS Authentication
@@ -279,6 +275,10 @@ This tool uses kubectl and your current Kubernetes context for accessing Kuberne
 - Appropriate RBAC permissions for secrets (get, list, create, update, patch)
 
 The tool will use your current kubectl context and namespace unless overridden with the `--namespace` option.
+
+## Docker Usage
+
+For detailed Docker usage examples and volume mounting instructions, see [DOCKER.md](DOCKER.md).
 
 ## Development
 
