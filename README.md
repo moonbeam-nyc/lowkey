@@ -67,13 +67,8 @@ lowkey <command> [options]
 
 ### Commands
 
-- `copy` - Copy secrets between different storage types
-- `list` - List available secrets for each storage type
-- `inspect` - Show help for inspecting secrets
-- `interactive, x` - Interactive secret browser and inspector with editing capabilities
-
 <details>
-<summary><strong>Copy Command</strong></summary>
+<summary><strong>copy</strong> - Copy secrets between different storage types</summary>
 
 Copy secrets between different storage types:
 
@@ -130,7 +125,7 @@ lowkey copy \
 </details>
 
 <details>
-<summary><strong>List Command</strong></summary>
+<summary><strong>list</strong> - List available secrets for each storage type</summary>
 
 List available secrets for each storage type:
 
@@ -168,7 +163,7 @@ lowkey list --type kubernetes --namespace production
 </details>
 
 <details>
-<summary><strong>Inspect Command</strong></summary>
+<summary><strong>inspect</strong> - Inspect secrets to see keys and values</summary>
 
 Inspect a secret to see its keys and optionally values:
 
@@ -204,7 +199,7 @@ lowkey inspect --type env --name .env.production --show-values
 </details>
 
 <details>
-<summary><strong>Interactive Command</strong></summary>
+<summary><strong>interactive, x</strong> - Interactive secret browser with editing capabilities</summary>
 
 Launch an interactive secret browser and inspector with fuzzy search and editing capabilities:
 
@@ -263,7 +258,7 @@ lowkey x --path ./config
 ## Docker Usage
 
 <details>
-<summary><strong>Docker Copy Examples</strong></summary>
+<summary><strong>copy</strong></summary>
 
 ```bash
 # AWS Secrets Manager to stdout
@@ -292,7 +287,7 @@ docker run --rm \
 </details>
 
 <details>
-<summary><strong>Docker List Examples</strong></summary>
+<summary><strong>list</strong></summary>
 
 ```bash
 # List AWS secrets
@@ -313,7 +308,7 @@ docker run --rm \
 </details>
 
 <details>
-<summary><strong>Docker Interactive Examples</strong></summary>
+<summary><strong>interactive, x</strong></summary>
 
 ```bash
 # Interactive AWS secrets browser
@@ -339,16 +334,6 @@ docker run --rm -it \
 - AWS credentials configured for AWS Secrets Manager (optional)
 - kubectl configured for Kubernetes access (optional)
 - Secret stored as JSON object in the secret store
-
-## How it works
-
-1. Fetches the specified secret from the configured source
-2. Parses the secret value as JSON
-3. Validates that it's a flat object (no nested objects/arrays)
-4. For `env` output: Validates environment variable key names (`[A-Za-z_][A-Za-z0-9_]*`)
-5. For `env` output: Safely quotes and escapes values (handles newlines, quotes, backslashes)
-6. Backs up existing files to `<file>.bak` before overwriting
-7. Writes output in the specified format to the target file
 
 ## Authentication
 
