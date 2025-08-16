@@ -170,13 +170,36 @@ lowkey list --type kubernetes --namespace production
 <details>
 <summary><strong>Inspect Command</strong></summary>
 
-Show help and guidance for inspecting secrets:
+Inspect a secret to see its keys and optionally values:
 
 ```bash
-lowkey inspect --help
+lowkey inspect --type <type> --name <name> [options]
 ```
 
-The inspect command provides detailed information about how to examine secret contents and structure.
+#### Inspect Options
+
+- `--type <type>` - Storage type (required)
+- `--name <name>` - Secret name or file path (required)
+- `--show-values` - Show actual secret values (default: false, shows only keys)
+- `--region <region>` - AWS region (or use AWS_REGION environment variable)
+- `--path <path>` - Directory path to search for files (default: current directory)
+- `--help, -h` - Show help message
+
+#### Inspect Examples
+
+```bash
+# Inspect AWS secret keys only
+lowkey inspect --type aws-secrets-manager --name myapp-secrets
+
+# Inspect AWS secret with values
+lowkey inspect --type aws-secrets-manager --name myapp-secrets --show-values
+
+# Inspect JSON file
+lowkey inspect --type json --name config.json
+
+# Inspect env file with values
+lowkey inspect --type env --name .env.production --show-values
+```
 
 </details>
 
