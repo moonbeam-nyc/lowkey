@@ -140,11 +140,10 @@ jobs:
         echo "## 📊 Test Coverage Report" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        # Run coverage and capture output
-        COVERAGE_OUTPUT=$(npm run test:coverage 2>&1)
-        echo "$COVERAGE_OUTPUT" | grep -A 100 "^# File" | head -50 >> $GITHUB_STEP_SUMMARY || {
-          echo "Detailed coverage not found, showing summary:" >> $GITHUB_STEP_SUMMARY
-          echo "$COVERAGE_OUTPUT" | grep -A 5 "^# all files" >> $GITHUB_STEP_SUMMARY || echo "No coverage data available" >> $GITHUB_STEP_SUMMARY
+        # Extract coverage report from test output
+        npm run test:coverage 2>&1 | sed -n '/^# file /,/^# all files/p' >> $GITHUB_STEP_SUMMARY || {
+          echo "Coverage extraction failed, showing fallback:" >> $GITHUB_STEP_SUMMARY
+          npm run test:coverage 2>&1 | grep -A 3 "^# all files" >> $GITHUB_STEP_SUMMARY || echo "No coverage data available" >> $GITHUB_STEP_SUMMARY
         }
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
