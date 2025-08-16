@@ -29,6 +29,10 @@ lowkey interactive
 lowkey x
 ```
 
+## Requirements
+
+- Node.js >= 18
+
 ## Installation
 
 ### npm
@@ -309,13 +313,6 @@ docker run --rm -it \
 ```
 
 </details>
-
-## Requirements
-
-- Node.js >= 18
-- AWS credentials configured for AWS Secrets Manager (optional)
-- kubectl configured for Kubernetes access (optional)
-- Secret stored as JSON object in the secret store
 
 ## Authentication
 
