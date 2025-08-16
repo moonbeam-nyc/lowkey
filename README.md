@@ -20,11 +20,23 @@ lowkey copy \
   --output-name .env.dev
 ```
 
-**Frequent environment updates:** Browse and edit environment variables with fuzzy search and live editing.
+**Discovery and inspection:** List & inspect available secrets across different storage types.
 
 ```bash
-# Launch interactive mode with fuzzy search for quick browsing and editing
-# Press '/' to search, 'e' to edit, Ctrl+V to toggle value visibility
+lowkey list --type aws-secrets-manager --region us-east-1
+lowkey list --type kubernetes --namespace default
+lowkey list --type env
+lowkey list --type json --path ./config
+
+lowkey inspect --type aws-secrets-manager --name dev-secrets
+lowkey inspect --type kubernetes --name dev-secrets --namespace acme-corp 
+lowkey inspect --type env --name .env.dev
+lowkey inspect --type json --name dev.json
+```
+
+**Frequent environment updates:** Browse and edit environment variables with fuzzy search and live editing.
+```bash
+# Launch interactive mode with fuzzy search for browsing, editing, adding, deleting, copying secrets across storage types
 lowkey interactive
 lowkey x
 ```
