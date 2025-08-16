@@ -211,6 +211,43 @@ k3d-restart: k3d-stop k3d-start ## Restart the k3d cluster
 k3d-setup: k3d-create k3d-context ## Create cluster and set context (one command setup)
 	@echo "✅ k3d cluster ready to use!"
 
+# Debug and logging commands
+.PHONY: debug-run
+debug-run: ## Run lowkey in debug mode with logging
+	LOWKEY_DEBUG=true node cli.js $(ARGS)
+
+.PHONY: debug-interactive
+debug-interactive: ## Run interactive mode with debug logging
+	LOWKEY_DEBUG=true node cli.js interactive
+
+.PHONY: log
+log: ## View the latest debug log
+	@if [ -f "$$(ls -1t lowkey-logs/lowkey-debug-*.log 2>/dev/null | head -1)" ]; then \
+		tail -f "$$(ls -1t lowkey-logs/lowkey-debug-*.log | head -1)"; \
+	else \
+		echo "No debug logs found. Run with LOWKEY_DEBUG=true or use 'make debug-run'"; \
+	fi
+
+.PHONY: log-latest
+log-latest: ## Cat the entire latest debug log
+	@if [ -f "$$(ls -1t lowkey-logs/lowkey-debug-*.log 2>/dev/null | head -1)" ]; then \
+		cat "$$(ls -1t lowkey-logs/lowkey-debug-*.log | head -1)"; \
+	else \
+		echo "No debug logs found. Run with LOWKEY_DEBUG=true or use 'make debug-run'"; \
+	fi
+
+.PHONY: log-clean
+log-clean: ## Clean up all debug logs
+	rm -rf lowkey-logs/
+
+.PHONY: log-list
+log-list: ## List all debug log files
+	@if [ -d lowkey-logs ]; then \
+		ls -lht lowkey-logs/*.log 2>/dev/null | head -20 || echo "No logs found"; \
+	else \
+		echo "No logs directory found"; \
+	fi
+
 # Testing commands
 .PHONY: test
 test: ## Run all tests

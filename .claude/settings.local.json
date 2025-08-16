@@ -23,6 +23,9 @@
       "Bash(make:*)",
       "Bash(npm run test:coverage:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/private/var/folders/s3/b9xb095x1t7d_2g6f0k9cxlw0000gn/T/lowkey-logs"
+    ]
   }
 }

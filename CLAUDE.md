@@ -214,6 +214,31 @@ The interactive system now uses a **screen-based architecture** with individual 
 11. **`lib/arg-parser.js`** - Shared argument parsing utilities
 12. **`lib/constants.js`** - Configuration constants and magic numbers
 
+## Debug Logging
+
+When debugging issues, use the debug logging system:
+
+```bash
+# Run with debug logging enabled
+make debug-interactive       # Interactive mode with debug
+make debug-run ARGS="list"   # Any command with debug
+LOWKEY_DEBUG=true node cli.js interactive  # Direct debug
+
+# View logs
+make log                     # Tail the latest log (live)
+make log-latest             # Cat the entire latest log
+make log-list               # List all debug logs
+make log-clean              # Clean up all logs
+```
+
+Debug logs are saved to `./lowkey-logs/` in the current directory with timestamps. The logging system:
+- Captures all errors with stack traces
+- Logs key operations and state changes
+- Sanitizes sensitive data (passwords, tokens, secrets)
+- Creates a symlink to the latest log for easy access
+
+**Important**: When debugging crashes, always run `make log-latest` after the crash to see the full error details.
+
 ## Common Debugging Areas
 
 ### Interactive System Issues
