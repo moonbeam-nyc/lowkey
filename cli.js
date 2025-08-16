@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { colorize } = require('./lib/colors');
+const { ErrorHandler } = require('./lib/error-handler');
 const { parseCopyArgs, handleCopyCommand } = require('./commands/copy');
 const { parseListArgs, handleListCommand } = require('./commands/list');
 const { parseInspectArgs, handleInspectCommand } = require('./commands/inspect');
@@ -10,20 +11,30 @@ const debugLogger = require('./lib/debug-logger');
 // Global error handlers for debugging
 process.on('uncaughtException', (error) => {
   debugLogger.error('CLI', 'UNCAUGHT EXCEPTION', error);
-  console.error('\x1b[31mUNCAUGHT EXCEPTION:\x1b[0m', error.message);
-  console.error('Stack:', error.stack);
-  if (process.env.LOWKEY_DEBUG === 'true') {
-    console.error('Debug log saved to:', debugLogger.getLogPath());
+  
+  // Don't pollute interactive mode with debug output
+  const isInteractive = debugLogger.isInteractiveMode();
+  if (!isInteractive) {
+    console.error('\x1b[31mUNCAUGHT EXCEPTION:\x1b[0m', error.message);
+    console.error('Stack:', error.stack);
+    if (process.env.LOWKEY_DEBUG === 'true') {
+      console.error('Debug log saved to:', debugLogger.getLogPath());
+    }
   }
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   debugLogger.error('CLI', 'UNHANDLED REJECTION', reason);
-  console.error('\x1b[31mUNHANDLED REJECTION:\x1b[0m', reason);
-  console.error('Promise:', promise);
-  if (process.env.LOWKEY_DEBUG === 'true') {
-    console.error('Debug log saved to:', debugLogger.getLogPath());
+  
+  // Don't pollute interactive mode with debug output
+  const isInteractive = debugLogger.isInteractiveMode();
+  if (!isInteractive) {
+    console.error('\x1b[31mUNHANDLED REJECTION:\x1b[0m', reason);
+    console.error('Promise:', promise);
+    if (process.env.LOWKEY_DEBUG === 'true') {
+      console.error('Debug log saved to:', debugLogger.getLogPath());
+    }
   }
   process.exit(1);
 });
