@@ -36,7 +36,8 @@ lowkey inspect --type json --name dev.json
 
 **Frequent environment updates:** Browse and edit environment variables with fuzzy search and live editing.
 ```bash
-# Launch interactive mode with fuzzy search for browsing, editing, adding, deleting, copying secrets across storage types
+# Launch interactive secret browser to browse, edit, add, delete, and copy
+# secrets across storage types
 lowkey interactive
 lowkey x
 ```
@@ -301,6 +302,35 @@ docker run --rm \
   -v $(pwd):/workspace \
   ghcr.io/moonbeam-nyc/lowkey:latest \
   list --type env --path /workspace
+```
+
+</details>
+
+<details>
+<summary><strong>inspect</strong></summary>
+
+```bash
+# Inspect AWS secret keys only
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_REGION=us-east-1 \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  inspect --type aws-secrets-manager --name myapp-secrets
+
+# Inspect AWS secret with values
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_REGION=us-east-1 \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  inspect --type aws-secrets-manager --name myapp-secrets --show-values
+
+# Inspect local files with volume mount
+docker run --rm \
+  -v $(pwd):/workspace \
+  ghcr.io/moonbeam-nyc/lowkey:latest \
+  inspect --type json --name /workspace/config.json
 ```
 
 </details>
