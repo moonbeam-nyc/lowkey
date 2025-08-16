@@ -16,7 +16,7 @@ env:
 
 jobs:
   # Comprehensive test matrix across Node.js versions
-  test:
+  all-tests:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false  # Don't cancel other matrix jobs if one fails
@@ -126,12 +126,6 @@ jobs:
           make test
         fi
 
-    - name: Test Docker build
-      if: matrix.node-version == '22'  # Only test Docker build once
-      run: |
-        echo "🐳 Testing Docker build..."
-        make build
-        make run ARGS="--version"
 
     - name: Upload coverage to Codecov
       if: matrix.node-version == '22' && success()  # Only upload coverage once
@@ -155,3 +149,16 @@ jobs:
         echo "===== k3d Status ====="
         k3d cluster list || echo "k3d not available"
         kubectl get nodes || echo "kubectl not available"
+
+  # Test Docker build functionality
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Test Docker build
+      run: |
+        echo "🐳 Testing Docker build..."
+        make build
+        make run ARGS="--version"
