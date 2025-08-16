@@ -10,7 +10,8 @@ function parseCopyArgs(args) {
     '--input-type': { field: 'inputType', hasValue: true },
     '--input-name': { field: 'inputName', hasValue: true },
     '--output-type': { field: 'outputType', hasValue: true },
-    '--output-name': { field: 'outputName', hasValue: true }
+    '--output-name': { field: 'outputName', hasValue: true },
+    '--namespace': { field: 'namespace', hasValue: true }
   });
 
   const options = parseCommonArgs(args, {
@@ -41,6 +42,13 @@ function parseCopyArgs(args) {
     process.exit(1);
   }
 
+  // Validate namespace for kubernetes
+  const requiresNamespace = options.inputType === 'kubernetes' || options.outputType === 'kubernetes';
+  if (requiresNamespace && !options.namespace) {
+    console.error(colorize('Error: --namespace is required when using kubernetes type', 'red'));
+    process.exit(1);
+  }
+
   return options;
 }
 
@@ -54,6 +62,7 @@ ${colorize('Options:', 'cyan')}
   ${colorize('--input-type <type>', 'bold')}      Input source type (required)
   ${colorize('--input-name <name>', 'bold')}      Input source name/path (required)
   ${colorize('--region <region>', 'bold')}        AWS region (or use AWS_REGION environment variable)
+  ${colorize('--namespace <namespace>', 'bold')}  Kubernetes namespace (required for kubernetes type)
   ${colorize('--output-type <type>', 'bold')}     Output format (required)
   ${colorize('--output-name <file>', 'bold')}     Output file path (default: stdout)
   ${colorize('--stage <stage>', 'bold')}          Secret version stage (default: AWSCURRENT)
@@ -64,6 +73,7 @@ ${colorize('Supported types:', 'cyan')}
   ${colorize('aws-secrets-manager', 'bold')}      AWS Secrets Manager
   ${colorize('json', 'bold')}                     JSON file
   ${colorize('env', 'bold')}                      Environment file (.env format)
+  ${colorize('kubernetes', 'bold')}               Kubernetes secrets
 
 ${colorize('Examples:', 'cyan')}
   ${colorize('# AWS Secrets Manager to stdout', 'gray')}
@@ -83,6 +93,12 @@ ${colorize('Examples:', 'cyan')}
 
   ${colorize('# Auto-create secret if it doesn\'t exist', 'gray')}
   lowkey ${colorize('copy', 'bold')} --input-type env --input-name .env --output-type aws-secrets-manager --output-name new-secret -y
+
+  ${colorize('# Copy from Kubernetes secret to JSON file', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type kubernetes --input-name my-app-secret --namespace default --output-type json --output-name secrets.json
+
+  ${colorize('# Copy from JSON to Kubernetes secret', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type json --input-name config.json --output-type kubernetes --output-name app-config --namespace production
 `);
 }
 
@@ -112,6 +128,16 @@ async function handleCopyCommand(options) {
     
     console.error(colorize('Uploading to AWS Secrets Manager...', 'gray'));
     const result = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes);
+    console.error(result);
+    
+  } else if (options.outputType === 'kubernetes') {
+    // Kubernetes requires an output name (secret name)
+    if (!options.outputName) {
+      throw new Error(colorize('--output-name is required when output type is kubernetes', 'red'));
+    }
+    
+    console.error(colorize('Uploading to Kubernetes...', 'gray'));
+    const result = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes, options.namespace);
     console.error(result);
     
   } else {

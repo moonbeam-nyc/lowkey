@@ -140,6 +140,77 @@ publish-minor: ## Bump minor version and publish to npm
 publish-major: ## Bump major version and publish to npm
 	npm run publish:major
 
+# Kubernetes (k3d) cluster management
+.PHONY: k3d-check
+k3d-check: ## Check if k3d is installed
+	@which k3d > /dev/null 2>&1 || (echo "❌ k3d is not installed. Install it with: make k3d-install" && exit 1)
+	@echo "✅ k3d is installed: $$(k3d version)"
+
+.PHONY: k3d-install
+k3d-install: ## Install k3d (macOS/Linux)
+	@echo "Installing k3d..."
+	@if [ "$$(uname)" = "Darwin" ]; then \
+		if which brew > /dev/null 2>&1; then \
+			brew install k3d; \
+		else \
+			curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash; \
+		fi \
+	else \
+		curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash; \
+	fi
+	@echo "✅ k3d installed successfully"
+
+.PHONY: k3d-create
+k3d-create: k3d-check ## Create a local k3d cluster named 'lowkey-test'
+	k3d cluster create lowkey-test \
+		--servers 1 \
+		--agents 2 \
+		--port "8080:80@loadbalancer" \
+		--port "8443:443@loadbalancer" \
+		--wait
+	@echo "✅ k3d cluster 'lowkey-test' created successfully"
+	@echo "Run 'make k3d-context' to switch to this cluster"
+
+.PHONY: k3d-delete
+k3d-delete: ## Delete the k3d cluster 'lowkey-test'
+	k3d cluster delete lowkey-test
+	@echo "✅ k3d cluster 'lowkey-test' deleted"
+
+.PHONY: k3d-stop
+k3d-stop: ## Stop the k3d cluster 'lowkey-test'
+	k3d cluster stop lowkey-test
+	@echo "✅ k3d cluster 'lowkey-test' stopped"
+
+.PHONY: k3d-start
+k3d-start: ## Start the k3d cluster 'lowkey-test'
+	k3d cluster start lowkey-test
+	@echo "✅ k3d cluster 'lowkey-test' started"
+
+.PHONY: k3d-context
+k3d-context: ## Set kubectl context to k3d-lowkey-test
+	kubectl config use-context k3d-lowkey-test
+	@echo "✅ kubectl context switched to 'k3d-lowkey-test'"
+
+.PHONY: k3d-status
+k3d-status: ## Show status of k3d clusters
+	@echo "k3d clusters:"
+	@k3d cluster list
+	@echo ""
+	@echo "Current kubectl context:"
+	@kubectl config current-context
+
+.PHONY: k3d-clean
+k3d-clean: k3d-delete ## Clean up k3d cluster and all resources
+	@echo "✅ k3d cluster and resources cleaned up"
+
+.PHONY: k3d-restart
+k3d-restart: k3d-stop k3d-start ## Restart the k3d cluster
+	@echo "✅ k3d cluster restarted"
+
+.PHONY: k3d-setup
+k3d-setup: k3d-create k3d-context ## Create cluster and set context (one command setup)
+	@echo "✅ k3d cluster ready to use!"
+
 # Testing commands
 .PHONY: test
 test: ## Run all tests

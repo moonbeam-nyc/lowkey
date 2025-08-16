@@ -1,12 +1,14 @@
 const { colorize } = require('../lib/colors');
 const { listAwsSecrets } = require('../lib/aws');
 const { listEnvFiles, listJsonFiles } = require('../lib/files');
+const { checkKubectlAccess, getCurrentContext, listSecrets, getFormattedError } = require('../lib/kubernetes');
 const { parseCommonArgs, validateRequiredArgs, validateTypes, handleRegionFallback, validateAwsRegion, createCustomArgHandler } = require('../lib/arg-parser');
 const { STORAGE_TYPES } = require('../lib/constants');
 
 function parseListArgs(args) {
   const customArgHandler = createCustomArgHandler({
-    '--type': { field: 'type', hasValue: true }
+    '--type': { field: 'type', hasValue: true },
+    '--namespace': { field: 'namespace', hasValue: true }
   });
 
   const options = parseCommonArgs(args, {
@@ -33,6 +35,12 @@ function parseListArgs(args) {
     process.exit(1);
   }
 
+  // Validate namespace for kubernetes
+  if (options.type === 'kubernetes' && !options.namespace) {
+    console.error(colorize('Error: --namespace is required when using kubernetes type', 'red'));
+    process.exit(1);
+  }
+
   return options;
 }
 
@@ -45,6 +53,7 @@ List available secrets for each storage type.
 ${colorize('Options:', 'cyan')}
   ${colorize('--type <type>', 'bold')}            Storage type to list (required)
   ${colorize('--region <region>', 'bold')}        AWS region (or use AWS_REGION environment variable)
+  ${colorize('--namespace <namespace>', 'bold')}  Kubernetes namespace (required for kubernetes type)
   ${colorize('--path <path>', 'bold')}            Directory path to search for files (default: current directory)
   ${colorize('--help, -h', 'bold')}               Show this help message
 
@@ -52,6 +61,7 @@ ${colorize('Supported types:', 'cyan')}
   ${colorize('aws-secrets-manager', 'bold')}      List AWS Secrets Manager secrets visible to this account
   ${colorize('json', 'bold')}                     List *.json files
   ${colorize('env', 'bold')}                      List .env* files
+  ${colorize('kubernetes', 'bold')}               List Kubernetes secrets in specified namespace
 
 ${colorize('Examples:', 'cyan')}
   ${colorize('# List AWS secrets', 'gray')}
@@ -62,6 +72,9 @@ ${colorize('Examples:', 'cyan')}
 
   ${colorize('# List JSON files in specific directory', 'gray')}
   lowkey ${colorize('list', 'bold')} --type json --path ./config
+
+  ${colorize('# List Kubernetes secrets', 'gray')}
+  lowkey ${colorize('list', 'bold')} --type kubernetes --namespace default
 `);
 }
 
@@ -103,6 +116,26 @@ async function handleListCommand(options) {
         jsonFiles.forEach(file => {
           console.log(`  ${colorize(file, 'bright')}`);
         });
+      }
+      break;
+      
+    case 'kubernetes':
+      try {
+        await checkKubectlAccess();
+        const context = await getCurrentContext();
+        const secrets = await listSecrets(options.namespace);
+        
+        if (secrets.length === 0) {
+          console.log(colorize(`No secrets found in namespace '${options.namespace}' (context: ${context})`, 'yellow'));
+        } else {
+          console.log(colorize(`Found ${secrets.length} secret(s) in namespace '${options.namespace}' (context: ${context}):`, 'green'));
+          secrets.forEach(secret => {
+            console.log(`  ${colorize(secret, 'bright')}`);
+          });
+        }
+      } catch (error) {
+        console.error(getFormattedError(error));
+        process.exit(1);
       }
       break;
       
