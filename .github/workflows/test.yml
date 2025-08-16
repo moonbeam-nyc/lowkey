@@ -1,0 +1,177 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+# Cancel previous runs on new pushes to save resources
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # Comprehensive test matrix across Node.js versions
+  all-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false  # Don't cancel other matrix jobs if one fails
+      matrix:
+        include:
+          - node-version: 18
+            name: node18
+          - node-version: 20
+            name: node20
+          - node-version: 22
+            name: node22
+    name: all-tests (${{ matrix.name }})
+    
+    services:
+      # LocalStack for AWS services emulation
+      localstack:
+        image: localstack/localstack:3.0
+        ports:
+          - 4566:4566
+        env:
+          SERVICES: secretsmanager
+          DEBUG: 0
+          PERSISTENCE: 0
+          SKIP_INFRA_DOWNLOADS: 1
+        options: >-
+          --health-cmd="curl -f http://localhost:4566/_localstack/health || exit 1"
+          --health-interval=10s
+          --health-timeout=10s
+          --health-retries=12
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Lint and validate
+      run: |
+        echo "🔍 Linting and validating..."
+        npm run lint --if-present
+        node --check cli.js
+        find lib commands tests -name "*.js" -exec node --check {} \;
+        npm audit --audit-level=high
+
+    - name: Setup k3d
+      uses: AbsaOSS/k3d-action@v2
+      with:
+        cluster-name: "lowkey-test"
+        args: >-
+          --servers 1
+          --agents 2
+          --port "8080:80@loadbalancer"
+          --port "8443:443@loadbalancer"
+          --port "6443:6443@server:0"
+          --k3s-arg "--disable=traefik@server:0"
+          --wait
+
+    - name: Verify services are ready
+      run: |
+        echo "🔍 Checking LocalStack..."
+        echo "LocalStack container status:"
+        docker ps | grep localstack || echo "No running LocalStack container"
+        
+        echo "Testing LocalStack connectivity..."
+        curl -v http://localhost:4566/_localstack/health || {
+          echo "❌ LocalStack health endpoint not responding"
+          echo "Container logs:"
+          docker logs localstack_localstack_1 2>/dev/null || docker logs $(docker ps -aq --filter "ancestor=localstack/localstack:3.0") 2>/dev/null || echo "Could not retrieve logs"
+          exit 1
+        }
+        
+        echo "Waiting for SecretManager service..."
+        timeout 180 bash -c 'until curl -f http://localhost:4566/_localstack/health | grep -q "secretsmanager.*\(available\|running\)"; do echo "Waiting for LocalStack SecretManager... ($(date))"; sleep 5; done' || {
+          echo "❌ LocalStack SecretManager service failed to start"
+          echo "Final health status:"
+          curl -s http://localhost:4566/_localstack/health | jq . || curl -s http://localhost:4566/_localstack/health
+          echo "Container logs:"
+          docker logs localstack_localstack_1 2>/dev/null || docker logs $(docker ps -aq --filter "ancestor=localstack/localstack:3.0") 2>/dev/null || echo "Could not retrieve logs"
+          exit 1
+        }
+        
+        echo "Triggering SecretManager service initialization..."
+        AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
+          aws --endpoint-url=http://localhost:4566 secretsmanager list-secrets || \
+          curl -X POST "http://localhost:4566/moto-api/reset" || true
+        
+        echo "✅ LocalStack is ready!"
+        
+        echo "🔍 Checking k3d cluster..."
+        kubectl wait --for=condition=Ready nodes --all --timeout=120s
+        kubectl get nodes
+        echo "✅ k3d cluster is ready!"
+
+    - name: Run comprehensive test suite
+      env:
+        LOCALSTACK_ENDPOINT: http://localhost:4566
+        AWS_ACCESS_KEY_ID: test
+        AWS_SECRET_ACCESS_KEY: test
+        AWS_DEFAULT_REGION: us-east-1
+      run: |
+        echo "🧪 Running comprehensive test suite with coverage (Node.js ${{ matrix.node-version }})..."
+        if [ "${{ matrix.node-version }}" = "22" ]; then
+          # Only run coverage with thresholds on Node.js 22 (supports threshold options)
+          make test-coverage-threshold-with-setup
+        else
+          # Run full test suite without coverage thresholds on older versions
+          make test
+        fi
+
+
+    - name: Generate coverage summary
+      if: matrix.node-version == '22' && success()  # Only generate coverage summary once
+      run: |
+        echo "## 📊 Test Coverage Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        # Extract coverage report from test output
+        npm run test:coverage 2>&1 | sed -n '/^# file /,/^# all files/p' >> $GITHUB_STEP_SUMMARY || {
+          echo "Coverage extraction failed, showing fallback:" >> $GITHUB_STEP_SUMMARY
+          npm run test:coverage 2>&1 | grep -A 3 "^# all files" >> $GITHUB_STEP_SUMMARY || echo "No coverage data available" >> $GITHUB_STEP_SUMMARY
+        }
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+    - name: Debug on failure
+      if: failure()
+      run: |
+        echo "🔍 Job failed - collecting debug information..."
+        echo "===== LocalStack Status ====="
+        docker ps -a | grep localstack || echo "No LocalStack containers"
+        echo "===== LocalStack Logs ====="
+        docker logs localstack_localstack_1 2>/dev/null || docker logs $(docker ps -aq --filter "ancestor=localstack/localstack:3.0") 2>/dev/null || echo "Could not retrieve LocalStack logs"
+        echo "===== LocalStack Health ====="
+        curl -s http://localhost:4566/_localstack/health | jq . 2>/dev/null || curl -s http://localhost:4566/_localstack/health || echo "Health endpoint not accessible"
+        echo "===== Network Status ====="
+        netstat -tlnp | grep 4566 || echo "Port 4566 not listening"
+        echo "===== k3d Status ====="
+        k3d cluster list || echo "k3d not available"
+        kubectl get nodes || echo "kubectl not available"
+
+  # Test Docker build functionality
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Test Docker build
+      run: |
+        echo "🐳 Testing Docker build..."
+        make build
+        make run ARGS="--version"

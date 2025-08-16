@@ -19,6 +19,7 @@ All commands are in the `commands/` directory:
 ### Core Libraries
 All core functionality is in the `lib/` directory:
 - `aws.js` - AWS Secrets Manager integration
+- `kubernetes.js` - Kubernetes secrets integration with namespace support
 - `files.js` - Local file operations (env/JSON)
 - `secrets.js` - Secret parsing/generation logic
 - `colors.js` - Terminal color utilities
@@ -28,6 +29,7 @@ All core functionality is in the `lib/` directory:
 - `key-handlers.js` - Key event processing and reusable handlers
 - `renderer.js` - Screen rendering with throttling and pagination utilities
 - `interactive.js` - Interactive UI orchestration and editor integration
+- `debug-logger.js` - Debug logging system with timestamped file output
 
 ## Key Features
 
@@ -39,9 +41,10 @@ All core functionality is in the `lib/` directory:
 - **Visual feedback** with cursor indicators in search mode
 
 #### Interactive Navigation Flow
-1. **Type Selection** - Choose between aws-secrets-manager, env, json
+1. **Type Selection** - Choose between aws-secrets-manager, env, json, kubernetes
 2. **Secret Selection** - Browse available secrets with fuzzy search
-3. **Key Browser** - View/edit individual key-value pairs
+3. **Namespace Selection** (Kubernetes only) - Choose Kubernetes namespace
+4. **Key Browser** - View/edit individual key-value pairs
 
 #### Interactive Key Bindings
 - `↑↓` or `j/k` - Navigate items
@@ -55,20 +58,23 @@ All core functionality is in the `lib/` directory:
 
 ### Copy Wizard (`Ctrl+S` from Key Browser)
 - **Smart filtering** - Copies filtered keys if search is active, all keys otherwise
-- **Multi-step wizard** - Preview → Format Selection → File Selection → Confirmation
+- **Multi-step wizard** - Preview → Format Selection → File/Namespace Selection → Confirmation
 - **Context preservation** - Always shows keys being copied and current selections
-- **Format support** - Export to .env or .json formats
+- **Format support** - Export to .env, .json, or Kubernetes secrets
+- **Kubernetes integration** - Full namespace selection, secret listing, and inline secret creation
 - **File management** - Choose existing files or create new ones with guided naming
 - **Visual feedback** - Inline status updates (copying → success/error) without losing context
 - **Automatic backup** - Creates .bak files before overwriting existing files
+- **Auto-navigation** - Automatically navigates to newly created secrets/files after successful copy
 
 ### Editing Features
 - **Environment files (.env)** - Edit in env format, save to local file
 - **JSON files** - Edit in JSON format, save to local file  
 - **AWS Secrets** - Edit in JSON format, upload to AWS Secrets Manager
+- **Kubernetes Secrets** - Edit in JSON format, upload to Kubernetes cluster
 - **Filtered editing** - When search is active, only matching keys are editable
 - **Automatic validation** - JSON parsing, flat object structure, env key format
-- **Error handling** - Clear error messages for invalid formats or AWS failures
+- **Error handling** - Clear error messages for invalid formats or AWS/Kubernetes failures
 
 ### Search Functionality
 - **Regex support** - Search patterns like `log.*Error`
@@ -214,6 +220,31 @@ The interactive system now uses a **screen-based architecture** with individual 
 11. **`lib/arg-parser.js`** - Shared argument parsing utilities
 12. **`lib/constants.js`** - Configuration constants and magic numbers
 
+## Debug Logging
+
+When debugging issues, use the debug logging system:
+
+```bash
+# Run with debug logging enabled
+make debug-interactive       # Interactive mode with debug
+make debug-run ARGS="list"   # Any command with debug
+LOWKEY_DEBUG=true node cli.js interactive  # Direct debug
+
+# View logs
+make log                     # Tail the latest log (live)
+make log-latest             # Cat the entire latest log
+make log-list               # List all debug logs
+make log-clean              # Clean up all logs
+```
+
+Debug logs are saved to `./lowkey-logs/` in the current directory with timestamps. The logging system:
+- Captures all errors with stack traces
+- Logs key operations and state changes
+- Sanitizes sensitive data (passwords, tokens, secrets)
+- Creates a symlink to the latest log for easy access
+
+**Important**: When debugging crashes, always run `make log-latest` after the crash to see the full error details.
+
 ## Common Debugging Areas
 
 ### Interactive System Issues
@@ -250,6 +281,7 @@ lowkey/
 ├── lib/                # Core libraries (enhanced 2025)
 │   ├── arg-parser.js   # Shared argument parsing utilities
 │   ├── aws.js          # AWS Secrets Manager operations
+│   ├── kubernetes.js   # Kubernetes secrets operations with namespace support
 │   ├── colors.js       # Terminal color utilities
 │   ├── constants.js    # Configuration constants
 │   ├── files.js        # Local file operations
@@ -259,15 +291,17 @@ lowkey/
 │   ├── secrets.js      # Secret format handling and validation
 │   ├── terminal-manager.js # Terminal state management & screen stack
 │   ├── terminal-utils.js # Terminal utility functions
+│   ├── debug-logger.js # Debug logging system with timestamped file output
 │   └── screens/        # Screen-based UI components
 │       ├── index.js    # Screen exports
 │       ├── base-screen.js      # Foundation screen class
 │       ├── type-selection-screen.js    # Storage type selection
 │       ├── secret-selection-screen.js  # Secret browsing & selection
 │       ├── key-browser-screen.js       # Key viewing/editing with copy
-│       ├── copy-wizard-screen.js       # Multi-step copy wizard
+│       ├── copy-wizard-screen.js       # Multi-step copy wizard with inline text input
 │       ├── text-input-screen.js        # Bordered text input with validation
-│       └── fuzzy-search-screen.js      # Reusable search interface
+│       ├── fuzzy-search-screen.js      # Reusable search interface
+│       └── kubernetes-namespace-screen.js # Kubernetes namespace selection
 ├── static/             # Assets
 │   └── lowkey.png
 └── package.json        # NPM configuration
@@ -287,14 +321,16 @@ This **screen-based architecture** provides:
 - **Context-aware copying**: Respects current search filters
 - **Guided workflow**: Multi-step wizard with visual feedback
 - **Smart file management**: Choose existing files or create new ones with validation
-- **Professional UI**: Bordered text input boxes with cursor navigation
+- **Inline text input**: Shared inline text input system for both file creation and Kubernetes secret naming
+- **No separate screens**: File naming now uses inline input instead of separate TextInputScreen to avoid activation issues
 
 ### Enhanced Text Input
-- **Visual design**: Bordered input boxes with Unicode box-drawing characters
-- **Cursor navigation**: White block cursor with arrow key movement
-- **Keyboard shortcuts**: Ctrl+A/E (start/end), Ctrl+U (clear), standard editing
-- **Real-time validation**: Input validation with error display
-- **Smart sizing**: Dynamic box width based on content/placeholder length
+- **Shared utility**: `renderInlineTextInput()` method used by both filename input and Kubernetes secret creation
+- **Visual design**: Bordered input boxes with Unicode box-drawing characters  
+- **Cursor navigation**: White block cursor with real-time character input
+- **Keyboard shortcuts**: Backspace, Ctrl+U (clear), arrow keys, standard editing
+- **Immediate response**: No screen switching - input happens directly in the wizard
+- **Auto-validation**: Filename validation and extension auto-addition
 
 # Testing
 
@@ -479,3 +515,155 @@ node --test --experimental-test-coverage \
 - **Real data**: Use actual file formats and edge cases
 
 See [tests/README.md](tests/README.md) for detailed testing documentation and helpers.
+
+# Debug Logging
+
+Comprehensive debug logging system for troubleshooting interactive components and copy operations.
+
+## Enable Debug Logging
+
+```bash
+# Enable debug logging
+LOWKEY_DEBUG=true node cli.js interactive
+
+# Using make commands
+make debug-interactive    # Run interactive mode with debug logging
+make debug-run           # Run any command with debug logging
+
+# View logs
+make log                 # Follow latest log in real-time
+make log-latest          # View latest log content  
+make log-list            # List all debug log files
+make log-clean           # Clean old debug logs
+```
+
+## Debug Log Features
+
+- **Timestamped files**: Each session creates `lowkey-debug-YYYY-MM-DDTHH-MM-SS.log`
+- **Symlinked latest**: `lowkey-logs/latest.log` always points to newest log
+- **Sensitive data sanitization**: Automatically redacts passwords, tokens, secrets, keys
+- **Structured logging**: Component-based logging with JSON data objects
+- **Global error capture**: Uncaught exceptions and unhandled rejections logged
+- **Real-time writing**: Logs written immediately (not buffered until exit)
+
+## Log Location
+
+Debug logs are written to `./lowkey-logs/` in the current working directory.
+
+# Development
+
+## k3d Local Kubernetes
+
+For local Kubernetes development and testing:
+
+```bash
+# Cluster management
+make k3d-setup           # Install k3d if not present
+make k3d-create          # Create 'lowkey-test' cluster
+make k3d-start           # Start existing cluster
+make k3d-stop            # Stop cluster
+make k3d-delete          # Delete cluster
+make k3d-restart         # Stop and start cluster
+make k3d-context         # Switch kubectl context to cluster
+make k3d-status          # Show cluster status
+make k3d-clean           # Delete cluster and clean up
+
+# Combined operations
+make k3d-setup k3d-create k3d-context  # Full setup for new development
+```
+
+The k3d cluster runs on port 6443 and is pre-configured for lowkey development and testing.
+
+# Refactoring Roadmap
+
+## Planned Refactoring Initiatives (2025)
+
+### 1. **Command Handler Unification** 🚧 *IN PROGRESS*
+**Priority**: High  
+**Problem**: Interactive and non-interactive commands duplicate core logic
+- `commands/copy.js` and `lib/screens/copy-wizard-screen.js` both handle secret copying
+- `commands/list.js` and interactive screens both list secrets  
+- `commands/inspect.js` and interactive screens both inspect secrets
+
+**Solution**: Create shared command handlers in `lib/command-handlers.js`:
+```javascript
+class CommandHandlers {
+  static async copySecret(options) {
+    // Shared copy logic used by both copy.js and copy-wizard-screen.js
+  }
+  static async listSecrets(options) {
+    // Shared list logic used by both list.js and interactive screens
+  }
+}
+```
+
+### 2. **Argument Parsing Consolidation** 📋 *PLANNED*
+**Priority**: High  
+**Problem**: Each command has similar argument parsing patterns with repeated validation logic
+
+**Solution**: Create generic command parser in `lib/command-parser.js` with command configuration objects.
+
+### 3. **Secret Operations Abstraction** 🔄 *PLANNED*
+**Priority**: Medium  
+**Problem**: Secret fetching/uploading logic scattered across `secrets.js`, `aws.js`, `kubernetes.js`
+
+**Solution**: Unified secret operations interface in `lib/secret-operations.js` with provider abstraction.
+
+### 4. **Error Handling Standardization** ⚠️ *PLANNED*
+**Priority**: Medium  
+**Problem**: Inconsistent error handling - some throw, others return error objects, different formatting
+
+**Solution**: Centralized error handling system in `lib/error-handler.js` with standardized formatting.
+
+### 5. **Configuration Management** ⚙️ *PLANNED*
+**Priority**: Low  
+**Problem**: Configuration scattered across config files, env vars, and hard-coded constants
+
+**Solution**: Centralized configuration management in `lib/config.js` with unified loading.
+
+### 6. **Terminal UI Component Reuse** 🖥️ *PLANNED*
+**Priority**: Low  
+**Problem**: Interactive screens have duplicated UI logic and rendering patterns
+
+**Solution**: Reusable UI components in `lib/ui-components.js` for common patterns.
+
+## Benefits of Refactoring
+- **Reduced Duplication**: Shared logic between interactive and non-interactive modes
+- **Easier Maintenance**: Core logic changes only need to be made in one place
+- **Better Testing**: Shared functions can be tested once and reused
+- **Easier Extension**: Adding new commands or storage types becomes simpler
+- **Improved Reliability**: Standardized error handling and validation
+
+## Commit Message Style Guide
+
+Follow this consistent commit message pattern based on project history:
+
+### Format
+- **Imperative mood**: Start with action verbs like "Add", "Fix", "Refactor", "Update", "Remove"
+- **Concise**: Short descriptions without periods or punctuation
+- **Present tense**: Describe what the commit does, not what was done
+- **Focus on what, not why**: The change itself, not the reasoning
+
+### Examples from Project History
+```
+Add interactive copy
+Fix env copy filename input  
+Refactor screens into their own files
+Add k8s copying
+Remove checkboxes from existing files
+Update claude.md
+Increase test coverage
+Add more tests
+```
+
+### Common Patterns
+- **Add**: New features, files, functionality
+- **Fix**: Bug fixes, error corrections
+- **Refactor**: Code restructuring without changing functionality
+- **Update**: Modifications to existing features
+- **Remove**: Deletion of code, features, or files
+
+- whenever i send a prompt that says "archive" and that alone, that means i want you to update the claude.md memory with any updates we've made to keep it current
+- whenever i say "add and commit", i want you to add the updated files and commit using my standard commit messaging
+- remember that you can't run lowkey in interactive mode because it nees TTY
+- "test add commit" should use make test to make sure it tests localstack and k3d too

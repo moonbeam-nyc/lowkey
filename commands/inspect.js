@@ -1,39 +1,10 @@
-const { colorize } = require('../lib/colors');
-const { fetchSecret, parseSecretData } = require('../lib/secrets');
-const { parseCommonArgs, validateRequiredArgs, validateTypes, handleRegionFallback, validateAwsRegion, createCustomArgHandler } = require('../lib/arg-parser');
-const { STORAGE_TYPES } = require('../lib/constants');
+const { colorize } = require('../lib/core/colors');
+const { CommandParser } = require('../lib/cli/command-parser');
+const { CommandHandlers } = require('../lib/cli/command-handlers');
 
 function parseInspectArgs(args) {
-  const customArgHandler = createCustomArgHandler({
-    '--type': { field: 'type', hasValue: true },
-    '--name': { field: 'name', hasValue: true }
-  });
-
-  const options = parseCommonArgs(args, {
-    defaults: { command: 'inspect' },
-    showHelp: showInspectHelp,
-    customArgs: customArgHandler
-  });
-
-  handleRegionFallback(options);
-
-  if (!validateRequiredArgs(options, ['type', 'name'])) {
-    showInspectHelp();
-    process.exit(1);
-  }
-
-  const supportedTypes = STORAGE_TYPES;
-  if (!validateTypes(options.type, supportedTypes)) {
-    process.exit(1);
-  }
-
-  const requiresRegion = options.type === 'aws-secrets-manager';
-  if (!validateAwsRegion(options, requiresRegion)) {
-    showInspectHelp();
-    process.exit(1);
-  }
-
-  return options;
+  const config = CommandParser.getInspectConfig(showInspectHelp);
+  return CommandParser.parseCommand(args, config);
 }
 
 function showInspectHelp() {
@@ -74,15 +45,14 @@ async function handleInspectCommand(options) {
   try {
     console.error(colorize(`Inspecting ${options.type}: '${options.name}'...`, 'gray'));
     
-    // Fetch the secret data using the same format as copy command
-    const fetchOptions = {
-      inputType: options.type,
-      inputName: options.name,
-      region: options.region
-    };
+    const result = await CommandHandlers.inspectSecret(options);
     
-    const secretString = await fetchSecret(fetchOptions);
-    const secretData = parseSecretData(secretString);
+    if (!result.success) {
+      console.error(colorize(`Error: ${result.error}`, 'red'));
+      process.exit(1);
+    }
+    
+    const { data: secretData } = result;
     
     if (typeof secretData !== 'object' || secretData === null) {
       console.error(colorize('Error: Secret data is not in a valid key-value format', 'red'));

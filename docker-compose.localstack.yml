@@ -1,0 +1,63 @@
+
+services:
+  localstack:
+    container_name: lowkey-localstack
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # external services port range
+    environment:
+      # LocalStack configuration
+      - DEBUG=${DEBUG-}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - PERSISTENCE=${PERSISTENCE-0}
+      
+      # AWS Services to enable
+      - SERVICES=secretsmanager,s3,iam
+      
+      # Enable LocalStack Pro features if license is available
+      - LOCALSTACK_API_KEY=${LOCALSTACK_API_KEY-}
+      
+      # AWS configuration
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      
+      # Additional configuration
+      - SKIP_INFRA_DOWNLOADS=1
+      - EAGER_SERVICE_LOADING=1
+      
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./tmp/localstack}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      
+    networks:
+      - lowkey-network
+
+  # Optional: AWS CLI container for easy testing
+  aws-cli:
+    container_name: lowkey-aws-cli
+    image: amazon/aws-cli:latest
+    depends_on:
+      - localstack
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_ENDPOINT_URL=http://localstack:4566
+    networks:
+      - lowkey-network
+    command: --version
+    profiles:
+      - tools  # Only start when explicitly requested
+
+networks:
+  lowkey-network:
+    driver: bridge
+
+# Usage:
+# Start LocalStack:           docker-compose -f docker-compose.localstack.yml up -d
+# Stop LocalStack:            docker-compose -f docker-compose.localstack.yml down
+# View logs:                  docker-compose -f docker-compose.localstack.yml logs -f localstack
+# Start with AWS CLI tools:   docker-compose -f docker-compose.localstack.yml --profile tools up -d
+# Test connectivity:          curl http://localhost:4566/_localstack/health

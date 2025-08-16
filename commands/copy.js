@@ -1,46 +1,14 @@
-const fs = require('fs');
-const { colorize } = require('../lib/colors');
-const { fetchSecret, parseSecretData, generateOutput } = require('../lib/secrets');
-const { validateEnvKey, backupFile } = require('../lib/files');
-const { parseCommonArgs, validateRequiredArgs, validateTypes, handleRegionFallback, validateAwsRegion, createCustomArgHandler } = require('../lib/arg-parser');
-const { STORAGE_TYPES } = require('../lib/constants');
+const { colorize } = require('../lib/core/colors');
+const { CommandParser } = require('../lib/cli/command-parser');
+const { CommandHandlers } = require('../lib/cli/command-handlers');
 
 function parseCopyArgs(args) {
-  const customArgHandler = createCustomArgHandler({
-    '--input-type': { field: 'inputType', hasValue: true },
-    '--input-name': { field: 'inputName', hasValue: true },
-    '--output-type': { field: 'outputType', hasValue: true },
-    '--output-name': { field: 'outputName', hasValue: true }
-  });
-
-  const options = parseCommonArgs(args, {
-    defaults: { command: 'copy' },
-    showHelp: showCopyHelp,
-    customArgs: customArgHandler
-  });
-
-  handleRegionFallback(options);
-
-  if (!validateRequiredArgs(options, ['inputType', 'inputName', 'outputType'])) {
-    showCopyHelp();
-    process.exit(1);
-  }
-
-  const supportedTypes = STORAGE_TYPES;
-  if (!validateTypes(options.inputType, supportedTypes)) {
-    process.exit(1);
-  }
-
-  if (!validateTypes(options.outputType, supportedTypes)) {
-    process.exit(1);
-  }
-
-  const requiresRegion = options.inputType === 'aws-secrets-manager' || options.outputType === 'aws-secrets-manager';
-  if (!validateAwsRegion(options, requiresRegion)) {
-    showCopyHelp();
-    process.exit(1);
-  }
-
+  const config = CommandParser.getCopyConfig(showCopyHelp);
+  const options = CommandParser.parseCommand(args, config);
+  
+  // Additional validation specific to copy command
+  CommandParser.validateCopyCommand(options);
+  
   return options;
 }
 
@@ -54,6 +22,7 @@ ${colorize('Options:', 'cyan')}
   ${colorize('--input-type <type>', 'bold')}      Input source type (required)
   ${colorize('--input-name <name>', 'bold')}      Input source name/path (required)
   ${colorize('--region <region>', 'bold')}        AWS region (or use AWS_REGION environment variable)
+  ${colorize('--namespace <namespace>', 'bold')}  Kubernetes namespace (required for kubernetes type)
   ${colorize('--output-type <type>', 'bold')}     Output format (required)
   ${colorize('--output-name <file>', 'bold')}     Output file path (default: stdout)
   ${colorize('--stage <stage>', 'bold')}          Secret version stage (default: AWSCURRENT)
@@ -64,6 +33,7 @@ ${colorize('Supported types:', 'cyan')}
   ${colorize('aws-secrets-manager', 'bold')}      AWS Secrets Manager
   ${colorize('json', 'bold')}                     JSON file
   ${colorize('env', 'bold')}                      Environment file (.env format)
+  ${colorize('kubernetes', 'bold')}               Kubernetes secrets
 
 ${colorize('Examples:', 'cyan')}
   ${colorize('# AWS Secrets Manager to stdout', 'gray')}
@@ -83,53 +53,47 @@ ${colorize('Examples:', 'cyan')}
 
   ${colorize('# Auto-create secret if it doesn\'t exist', 'gray')}
   lowkey ${colorize('copy', 'bold')} --input-type env --input-name .env --output-type aws-secrets-manager --output-name new-secret -y
+
+  ${colorize('# Copy from Kubernetes secret to JSON file', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type kubernetes --input-name my-app-secret --namespace default --output-type json --output-name secrets.json
+
+  ${colorize('# Copy from JSON to Kubernetes secret', 'gray')}
+  lowkey ${colorize('copy', 'bold')} --input-type json --input-name config.json --output-type kubernetes --output-name app-config --namespace production
 `);
 }
 
 async function handleCopyCommand(options) {
-  // Send progress messages to stderr so they don't interfere with stdout output
-  console.error(colorize(`Fetching data from ${options.inputType}: '${options.inputName}'...`, 'gray'));
-  const secretString = await fetchSecret(options);
-  
-  console.error(colorize('Parsing secret data...', 'gray'));
-  const secretData = parseSecretData(secretString);
-  
-  // Validate keys for env output type
-  if (options.outputType === 'env') {
-    for (const key of Object.keys(secretData)) {
-      if (!validateEnvKey(key)) {
-        throw new Error(colorize(`Invalid environment variable key: '${key}'. Keys must match pattern [A-Za-z_][A-Za-z0-9_]*`, 'red'));
-      }
+  // Map CLI options to CommandHandlers format
+  const copyOptions = {
+    inputType: options.inputType,
+    inputName: options.inputName,
+    outputType: options.outputType,
+    outputName: options.outputName,
+    region: options.region,
+    namespace: options.namespace,
+    stage: options.stage,
+    autoYes: options.autoYes,
+    onProgress: (message) => {
+      // Send progress messages to stderr so they don't interfere with stdout output
+      console.error(colorize(message, 'gray'));
     }
+  };
+
+  const result = await CommandHandlers.copySecret(copyOptions);
+
+  if (!result.success) {
+    throw new Error(colorize(result.error, 'red'));
   }
-  
-  // Handle output based on type
-  if (options.outputType === 'aws-secrets-manager') {
-    // AWS Secrets Manager requires an output name
-    if (!options.outputName) {
-      throw new Error(colorize('--output-name is required when output type is aws-secrets-manager', 'red'));
-    }
-    
-    console.error(colorize('Uploading to AWS Secrets Manager...', 'gray'));
-    const result = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes);
-    console.error(result);
-    
-  } else {
-    // File or stdout output
-    const outputContent = await generateOutput(secretData, options.outputType, options.outputName, options.region, options.stage, options.autoYes);
-    
-    if (options.outputName) {
-      // Output to file
-      backupFile(options.outputName);
-      fs.writeFileSync(options.outputName, outputContent);
-      
-      const keyCount = Object.keys(secretData).length;
-      const itemType = options.outputType === 'env' ? 'environment variables' : 'keys';
-      console.error(colorize(`Successfully written to ${options.outputName} (${keyCount} ${itemType})`, 'green'));
-    } else {
-      // Output to stdout
-      process.stdout.write(outputContent);
-    }
+
+  // Handle different result types
+  if (result.type === 'aws-upload') {
+    console.error(result.message);
+  } else if (result.type === 'kubernetes-upload') {
+    console.error(result.message);
+  } else if (result.type === 'file-output') {
+    console.error(colorize(result.message, 'green'));
+  } else if (result.type === 'stdout-output') {
+    process.stdout.write(result.content);
   }
 }
 

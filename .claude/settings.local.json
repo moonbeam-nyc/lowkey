@@ -21,8 +21,21 @@
       "Bash(time npm run test:unit:*)",
       "Bash(time npm run test:integration:*)",
       "Bash(make:*)",
-      "Bash(npm run test:coverage:*)"
+      "Bash(npm run test:coverage:*)",
+      "Bash(npm test:*)",
+      "Bash(git add:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(find:*)",
+      "WebSearch",
+      "Bash(docker ps:*)",
+      "Bash(curl:*)",
+      "Bash(LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 npm test tests/integration/copy-matrix.test.js)",
+      "Bash(LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 node debug-test.js)",
+      "Bash(git commit:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/private/var/folders/s3/b9xb095x1t7d_2g6f0k9cxlw0000gn/T/lowkey-logs"
+    ]
   }
 }
