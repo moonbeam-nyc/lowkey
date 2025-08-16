@@ -155,7 +155,7 @@ jobs:
     strategy:
       fail-fast: false  # Don't cancel other matrix jobs if one fails
       matrix:
-        node-version: [16, 20]
+        node-version: [16, 18, 20]
         
     steps:
     - name: Checkout code
