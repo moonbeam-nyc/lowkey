@@ -6,7 +6,7 @@
 
 Sync secrets between any supported storage types with ease, and list available secrets across different storage systems.
 
-Currently supports AWS Secrets Manager, env, and json.
+Currently supports AWS Secrets Manager, Kubernetes secrets, env, and json.
 
 ## Use Cases
 
@@ -25,6 +25,9 @@ lowkey copy \
 ```bash
 # List all AWS secrets visible to your account
 lowkey list --type aws-secrets-manager --region us-east-1
+
+# List Kubernetes secrets in current namespace
+lowkey list --type kubernetes
 
 # List local .env files and JSON configuration files
 lowkey list --type env --path ./config
@@ -69,9 +72,8 @@ lowkey <command> [options]
 - `inspect` - Show help for inspecting secrets
 - `interactive, x` - Interactive secret browser and inspector with editing capabilities
 
----
-
-### Copy Command
+<details>
+<summary><strong>Copy Command</strong></summary>
 
 Copy secrets between different storage types:
 
@@ -84,81 +86,15 @@ lowkey copy --input-type <type> --input-name <name|path> --output-type <type> [o
 - `--input-type <type>` - Input source type (required)
 - `--input-name <name>` - Input source name/path (required)
 - `--region <region>` - AWS region (or use AWS_REGION environment variable)
+- `--namespace <namespace>` - Kubernetes namespace (defaults to current context namespace)
 - `--output-type <type>` - Output format (required)
 - `--output-name <file>` - Output file path (default: stdout)
 - `--stage <stage>` - Secret version stage (default: `AWSCURRENT`)
 - `-y, --yes` - Auto-confirm prompts (e.g., secret creation)
 - `--help, -h` - Show help message
 
----
-
-### List Command
-
-List available secrets for each storage type:
-
-```bash
-lowkey list --type <type> [options]
-```
-
-#### List Options
-
-- `--type <type>` - Storage type to list (required)
-- `--region <region>` - AWS region (or use AWS_REGION environment variable)
-- `--path <path>` - Directory path to search for files (default: current directory)
-- `--help, -h` - Show help message
-
----
-
-### Inspect Command
-
-Show help and guidance for inspecting secrets:
-
-```bash
-lowkey inspect --help
-```
-
-The inspect command provides detailed information about how to examine secret contents and structure.
-
----
-
-### Interactive Command
-
-Launch an interactive secret browser and inspector with fuzzy search and editing capabilities:
-
-```bash
-lowkey interactive [options]
-lowkey x [options]  # Short alias
-```
-
-#### Interactive Features
-
-- **Fuzzy searchable interface** - Navigate with arrow keys, press `/` to search
-- **Multi-format support** - Browse AWS Secrets Manager, .env files, and JSON files
-- **Live editing** - Press `e` to edit secrets in your preferred editor ($EDITOR or vim)
-- **Real-time updates** - Changes are immediately saved to AWS or local files
-- **Search preservation** - Search queries are preserved when navigating between views
-- **Breadcrumb navigation** - Use ESC to go back, with preserved context
-
-#### Interactive Options
-
-- `--region <region>` - AWS region (or use AWS_REGION environment variable)
-- `--path <path>` - Directory path to search for files (default: current directory)
-- `--help, -h` - Show help message
-
-#### Interactive Navigation
-
-- `↑↓` or `j/k` - Navigate items
-- `Ctrl+U/D` or `Ctrl+B/F` - Page up/down
-- `/` - Enter search mode (shows cursor in search field)
-- `e` - Edit selected secret (env/json/AWS)
-- `Ctrl+V` - Toggle showing values vs keys only
-- `Enter` - Select item
-- `Esc` - Go back or exit search mode
-- `Ctrl+C` - Exit
-
-### Examples
-
 #### Copy Examples
+
 ```bash
 # AWS Secrets Manager to env file
 lowkey copy \
@@ -181,9 +117,37 @@ lowkey copy \
   --output-type aws-secrets-manager \
   --output-name new-secret \
   --yes
+
+# Copy from Kubernetes secret to env file
+lowkey copy \
+  --input-type kubernetes \
+  --input-name my-k8s-secret \
+  --namespace production \
+  --output-type env \
+  --output-name .env
 ```
 
+</details>
+
+<details>
+<summary><strong>List Command</strong></summary>
+
+List available secrets for each storage type:
+
+```bash
+lowkey list --type <type> [options]
+```
+
+#### List Options
+
+- `--type <type>` - Storage type to list (required)
+- `--region <region>` - AWS region (or use AWS_REGION environment variable)
+- `--namespace <namespace>` - Kubernetes namespace (defaults to current context namespace)
+- `--path <path>` - Directory path to search for files (default: current directory)
+- `--help, -h` - Show help message
+
 #### List Examples
+
 ```bash
 # List all AWS secrets in your account
 lowkey list --type aws-secrets-manager --region us-east-1
@@ -196,9 +160,66 @@ lowkey list --type json --path ./config
 
 # List env files in a specific directory
 lowkey list --type env --path ./environments
+
+# List Kubernetes secrets in specific namespace
+lowkey list --type kubernetes --namespace production
 ```
 
+</details>
+
+<details>
+<summary><strong>Inspect Command</strong></summary>
+
+Show help and guidance for inspecting secrets:
+
+```bash
+lowkey inspect --help
+```
+
+The inspect command provides detailed information about how to examine secret contents and structure.
+
+</details>
+
+<details>
+<summary><strong>Interactive Command</strong></summary>
+
+Launch an interactive secret browser and inspector with fuzzy search and editing capabilities:
+
+```bash
+lowkey interactive [options]
+lowkey x [options]  # Short alias
+```
+
+#### Interactive Features
+
+- **Fuzzy searchable interface** - Navigate with arrow keys, press `/` to search
+- **Multi-format support** - Browse AWS Secrets Manager, Kubernetes secrets, .env files, and JSON files
+- **Live editing** - Press `e` to edit secrets in your preferred editor ($EDITOR or vim)
+- **Real-time updates** - Changes are immediately saved to AWS or local files
+- **Search preservation** - Search queries are preserved when navigating between views
+- **Breadcrumb navigation** - Use ESC to go back, with preserved context
+
+#### Interactive Options
+
+- `--region <region>` - AWS region (or use AWS_REGION environment variable)
+- `--namespace <namespace>` - Kubernetes namespace (defaults to current context namespace)
+- `--path <path>` - Directory path to search for files (default: current directory)
+- `--help, -h` - Show help message
+
+#### Interactive Navigation
+
+- `↑↓` or `j/k` - Navigate items
+- `Ctrl+U/D` or `Ctrl+B/F` - Page up/down
+- `/` - Enter search mode (shows cursor in search field)
+- `e` - Edit selected secret (env/json/AWS/Kubernetes)
+- `Ctrl+S` - Copy secrets (from key browser)
+- `Ctrl+V` - Toggle showing values vs keys only
+- `Enter` - Select item
+- `Esc` - Go back or exit search mode
+- `Ctrl+C` - Exit
+
 #### Interactive Examples
+
 ```bash
 # Launch interactive mode
 lowkey interactive
@@ -213,9 +234,14 @@ lowkey interactive --region us-west-2
 lowkey x --path ./config
 ```
 
+</details>
+
+
 ## Docker Usage
 
-### Copy Examples
+<details>
+<summary><strong>Docker Copy Examples</strong></summary>
+
 ```bash
 # AWS Secrets Manager to stdout
 docker run --rm \
@@ -240,7 +266,11 @@ docker run --rm \
   --output-type env --output-name /workspace/.env
 ```
 
-### List Examples
+</details>
+
+<details>
+<summary><strong>Docker List Examples</strong></summary>
+
 ```bash
 # List AWS secrets
 docker run --rm \
@@ -257,7 +287,11 @@ docker run --rm \
   list --type env --path /workspace
 ```
 
-### Interactive Examples
+</details>
+
+<details>
+<summary><strong>Docker Interactive Examples</strong></summary>
+
 ```bash
 # Interactive AWS secrets browser
 docker run --rm -it \
@@ -274,12 +308,13 @@ docker run --rm -it \
   x --path /workspace
 ```
 
-**Note:** Interactive mode requires the `-it` flags for Docker to provide a proper terminal interface.
+</details>
 
 ## Requirements
 
-- Node.js >= 16
-- AWS credentials configured for AWS Secrets Manager
+- Node.js >= 18
+- AWS credentials configured for AWS Secrets Manager (optional)
+- kubectl configured for Kubernetes access (optional)
 - Secret stored as JSON object in the secret store
 
 ## How it works
@@ -292,7 +327,9 @@ docker run --rm -it \
 6. Backs up existing files to `<file>.bak` before overwriting
 7. Writes output in the specified format to the target file
 
-## AWS Authentication
+## Authentication
+
+### AWS Authentication
 
 This tool uses the AWS SDK's default credential chain for AWS Secrets Manager. It's compatible with:
 
@@ -337,16 +374,15 @@ For listing secrets (list command):
 }
 ```
 
-## Error Handling
+### Kubernetes Authentication
 
-The tool will fail with clear error messages if:
-- Secret is not found
-- Secret is not valid JSON
-- Secret is not a flat object
-- Environment variable keys are invalid (for env output)
-- Source type is unsupported
-- Output type is unsupported
-- Required parameters are missing
+This tool uses kubectl and your current Kubernetes context for accessing Kubernetes secrets. Ensure you have:
+
+- kubectl installed and configured
+- Valid kubeconfig with access to your cluster
+- Appropriate RBAC permissions for secrets (get, list, create, update, patch)
+
+The tool will use your current kubectl context and namespace unless overridden with the `--namespace` option.
 
 ## Development
 
