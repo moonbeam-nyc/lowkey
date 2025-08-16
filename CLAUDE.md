@@ -665,3 +665,4 @@ Add more tests
 
 - whenever i send a prompt that says "archive" and that alone, that means i want you to update the claude.md memory with any updates we've made to keep it current
 - whenever i say "add and commit", i want you to add the updated files and commit using my standard commit messaging
+- remember that you can't run lowkey in interactive mode because it nees TTY

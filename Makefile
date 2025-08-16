@@ -178,8 +178,12 @@ k3d-delete: ## Delete the k3d cluster 'lowkey-test'
 
 .PHONY: k3d-stop
 k3d-stop: ## Stop the k3d cluster 'lowkey-test'
-	k3d cluster stop lowkey-test
-	@echo "✅ k3d cluster 'lowkey-test' stopped"
+	@k3d cluster stop lowkey-test
+	@echo "⏳ Waiting for containers to stop..."
+	@while docker ps --format '{{.Names}}' | grep -q 'k3d-lowkey-test'; do \
+		sleep 1; \
+	done
+	@echo "✅ k3d cluster 'lowkey-test' stopped and all containers are down"
 
 .PHONY: k3d-start
 k3d-start: ## Start the k3d cluster 'lowkey-test'
@@ -249,9 +253,22 @@ log-list: ## List all debug log files
 	fi
 
 # Testing commands
+.PHONY: test-setup
+test-setup: ## Setup test environment (LocalStack and k3d)
+	@./scripts/test-setup.sh
+
 .PHONY: test
-test: ## Run all tests including LocalStack AWS tests
-	$(MAKE) test-localstack
+test: test-setup ## Run all tests with automatic environment setup
+	@echo "🧪 Running all tests..."
+	@export LOCALSTACK_ENDPOINT=http://localhost:4566; \
+	export AWS_ACCESS_KEY_ID=test; \
+	export AWS_SECRET_ACCESS_KEY=test; \
+	export AWS_DEFAULT_REGION=us-east-1; \
+	npm test
+
+.PHONY: test-quick
+test-quick: ## Run tests without environment setup (quick, may skip some tests)
+	npm test
 
 .PHONY: test-watch
 test-watch: ## Run tests in watch mode
@@ -274,7 +291,7 @@ test-coverage-threshold: ## Run tests with coverage and enforce 80% threshold
 	npm run test:coverage:threshold
 
 .PHONY: test-ci
-test-ci: test test-coverage-threshold ## Run tests for CI with coverage requirements
+test-ci: test-setup test-coverage-threshold ## Run tests for CI with coverage requirements and environment setup
 	@echo "✅ All tests passed for CI with coverage requirements"
 
 # LocalStack commands for AWS simulation
