@@ -6,10 +6,11 @@ This guide covers development workflows, testing, and contribution guidelines fo
 
 ### Prerequisites
 
-- Node.js >= 16
+- Node.js >= 18
 - npm or yarn
 - Docker (for containerized testing)
 - AWS credentials (for AWS integration testing)
+- kubectl (for Kubernetes integration testing)
 
 ### Local Development
 
@@ -169,47 +170,67 @@ lowkey/
 │   ├── inspect.js
 │   ├── interactive.js
 │   └── list.js
-├── lib/                # Core libraries (refactored 2025)
-│   ├── arg-parser.js   # Shared argument parsing utilities
-│   ├── aws.js          # AWS Secrets Manager operations
-│   ├── colors.js       # Terminal color utilities
-│   ├── constants.js    # Configuration constants
-│   ├── files.js        # Local file operations
-│   ├── interactive.js  # Interactive UI orchestration
-│   ├── key-handlers.js # Key event processing & factories
-│   ├── renderer.js     # Screen rendering & pagination
-│   ├── secrets.js      # Secret format handling
-│   └── terminal-manager.js # Terminal state management
+├── lib/                # Core libraries (layered architecture 2025)
+│   ├── cli/            # CLI layer
+│   │   ├── arg-parser.js       # Common argument parsing
+│   │   ├── command-handlers.js # Shared command logic
+│   │   └── command-parser.js   # Unified command parsing
+│   ├── core/           # Core systems
+│   │   ├── colors.js           # Terminal color utilities
+│   │   ├── config.js           # Configuration management
+│   │   ├── constants.js        # Configuration constants
+│   │   ├── debug-logger.js     # Debug logging system
+│   │   └── error-handler.js    # Standardized error handling
+│   ├── interactive/    # Interactive system
+│   │   ├── interactive.js      # UI orchestration
+│   │   ├── key-handlers.js     # Key event processing
+│   │   ├── renderer.js         # Screen rendering
+│   │   ├── terminal-manager.js # Terminal state management
+│   │   ├── terminal-utils.js   # Terminal utilities
+│   │   ├── ui-components.js    # Reusable UI components
+│   │   └── screens/            # Screen components
+│   ├── providers/      # Storage providers
+│   │   ├── aws.js              # AWS Secrets Manager
+│   │   ├── files.js            # Local file operations
+│   │   ├── kubernetes.js       # Kubernetes secrets
+│   │   └── secret-operations.js # Unified operations
+│   └── utils/          # Utilities
+│       └── secrets.js          # Secret format handling
 ├── static/             # Assets
+├── DOCKER.md           # Docker usage documentation
 └── tests/              # Comprehensive test suite
 ```
 
-### Architecture Principles
+### Architecture Principles (Refactored 2025)
 
+- **Layered Architecture**: Clear separation between CLI, core, providers, interactive, and utilities
 - **Modular Architecture**: Composition over inheritance with separated concerns
-- **Factory Patterns**: Key handlers and utilities use configurable factories
-- **Configuration Centralization**: All constants in `constants.js`
-- **Shared Utilities**: Common patterns in reusable modules
-- **Error-First Patterns**: Consistent error handling throughout
+- **Unified Command Handling**: Shared logic between interactive and CLI modes via command handlers
+- **Provider Abstraction**: Consistent interface for all storage providers (AWS, files, Kubernetes)
+- **Configuration Centralization**: All settings managed in `lib/core/config.js`
+- **Standardized Error Handling**: Consistent error formatting via `lib/core/error-handler.js`
+- **Reusable UI Components**: Common interactive patterns in `lib/interactive/ui-components.js`
 
-### Adding New Storage Types
+### Adding New Storage Types (Updated Process)
 
-1. **Update Constants**: Add to `STORAGE_TYPES` in `lib/constants.js`
-2. **Implement Fetcher**: Add fetch function in appropriate lib file
-3. **Update Secrets**: Add case to `fetchSecret()` and `generateOutput()`
-4. **Add Validation**: Update argument validation in commands
-5. **Add Tests**: Create integration and unit tests
-6. **Update Help**: Add to command help text and examples
+1. **Update Constants**: Add to `STORAGE_TYPES` in `lib/core/constants.js`
+2. **Implement Provider**: Create new provider in `lib/providers/` following the interface pattern
+3. **Update Secret Operations**: Add case to `lib/providers/secret-operations.js`
+4. **Update Command Handlers**: Add support in `lib/cli/command-handlers.js`
+5. **Add Validation**: Update argument validation in `lib/cli/command-parser.js`
+6. **Add Tests**: Create integration and unit tests
+7. **Update Help**: Add to command help text and examples
 
-### Adding New Commands
+### Adding New Commands (Updated Process)
 
 1. **Create Command File**: `commands/new-command.js`
-2. **Implement Parser**: `parseNewCommandArgs()`
-3. **Implement Handler**: `handleNewCommandCommand()`
+2. **Add Command Config**: Define configuration in `lib/cli/command-parser.js`
+3. **Implement Handler**: Add handler logic in `lib/cli/command-handlers.js`
 4. **Update CLI Router**: Add to `cli.js` parseArgs and main functions
 5. **Add Help**: Update global help in `showHelp()`
 6. **Add Tests**: Integration and unit tests
 7. **Add Makefile**: Add relevant make targets if needed
+8. **Update Documentation**: Add examples to README.md and DOCKER.md if applicable
 
 ## Contributing Guidelines
 
@@ -270,19 +291,66 @@ node cli.js list --type aws-secrets-manager --region us-east-1
 
 **Interactive mode debugging:**
 ```bash
-# Test interactive without AWS
-node cli.js x --path ./
+# Note: Interactive mode requires TTY, so use debug logs for troubleshooting
+LOWKEY_DEBUG=true node cli.js x --path ./
 
-# Test with AWS
-node cli.js interactive --region us-east-1
+# Test with AWS (with debug logging)
+LOWKEY_DEBUG=true node cli.js interactive --region us-east-1
+
+# View debug logs after running
+make log-latest
 ```
 
 ### Common Issues
 
 **Permission Errors**: Ensure proper file permissions for local operations
 **AWS Errors**: Verify credentials and region configuration
-**Terminal Issues**: Interactive mode requires proper TTY support
-**Node Version**: Ensure Node.js >= 16 for built-in test runner support
+**Terminal Issues**: Interactive mode requires proper TTY support and cannot run in CI environments
+**Node Version**: Ensure Node.js >= 18 for built-in test runner support
+**Kubernetes Errors**: Verify kubectl configuration and cluster access
+**Debug Logging**: Use `LOWKEY_DEBUG=true` and check `./lowkey-logs/latest.log` for detailed troubleshooting
+
+## Local Kubernetes Development
+
+### k3d Setup
+
+For testing Kubernetes features locally, use k3d:
+
+```bash
+# Full setup for new development
+make k3d-setup k3d-create k3d-context
+
+# Individual commands
+make k3d-setup           # Install k3d if not present
+make k3d-create          # Create 'lowkey-test' cluster
+make k3d-start           # Start existing cluster
+make k3d-stop            # Stop cluster
+make k3d-delete          # Delete cluster
+make k3d-context         # Switch kubectl context to cluster
+make k3d-status          # Show cluster status
+
+# Test Kubernetes functionality
+node cli.js list --type kubernetes --namespace default
+LOWKEY_DEBUG=true node cli.js x  # Interactive mode with k8s support
+```
+
+The k3d cluster runs on port 6443 and is pre-configured for lowkey development.
+
+### LocalStack (AWS Testing)
+
+For testing AWS functionality locally without real AWS resources:
+
+```bash
+# Start LocalStack
+docker-compose -f docker-compose.localstack.yml up -d
+
+# Run tests against LocalStack
+LOCALSTACK_ENDPOINT=http://localhost:4566 \
+AWS_ACCESS_KEY_ID=test \
+AWS_SECRET_ACCESS_KEY=test \
+AWS_DEFAULT_REGION=us-east-1 \
+npm test tests/integration/copy-matrix.test.js
+```
 
 ## Performance Considerations
 
@@ -290,6 +358,7 @@ node cli.js interactive --region us-east-1
 - **Memory Management**: Automatic cleanup of temporary files in tests
 - **AWS Rate Limits**: Respect AWS API rate limits in batch operations
 - **Search Performance**: Fuzzy search optimized for large secret lists
+- **Configuration Caching**: Centralized config system minimizes repeated environment variable reads
 
 ## Security Guidelines
 

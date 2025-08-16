@@ -16,20 +16,48 @@ All commands are in the `commands/` directory:
 - `inspect.js` - Show help for secret inspection
 - `interactive.js` - Interactive secret browser with editing
 
-### Core Libraries
-All core functionality is in the `lib/` directory:
+### Core Libraries (Refactored 2025)
+The `lib/` directory is now organized into focused modules:
+
+#### CLI Layer (`lib/cli/`)
+- `command-parser.js` - Unified command parsing and configuration
+- `command-handlers.js` - Shared command logic between interactive and CLI modes
+- `arg-parser.js` - Common argument parsing utilities
+
+#### Core Systems (`lib/core/`)
+- `config.js` - Centralized configuration management with environment validation
+- `constants.js` - Configuration constants and magic numbers
+- `colors.js` - Terminal color utilities
+- `debug-logger.js` - Debug logging system with timestamped file output
+- `error-handler.js` - Standardized error handling and formatting
+
+#### Storage Providers (`lib/providers/`)
 - `aws.js` - AWS Secrets Manager integration
 - `kubernetes.js` - Kubernetes secrets integration with namespace support
 - `files.js` - Local file operations (env/JSON)
-- `secrets.js` - Secret parsing/generation logic
-- `colors.js` - Terminal color utilities
-- `constants.js` - Configuration constants and magic numbers
-- `arg-parser.js` - Shared argument parsing utilities
+- `secret-operations.js` - Unified secret operations interface
+
+#### Interactive System (`lib/interactive/`)
 - `terminal-manager.js` - Terminal state management (raw mode, alternate screen)
 - `key-handlers.js` - Key event processing and reusable handlers
 - `renderer.js` - Screen rendering with throttling and pagination utilities
 - `interactive.js` - Interactive UI orchestration and editor integration
-- `debug-logger.js` - Debug logging system with timestamped file output
+- `terminal-utils.js` - Terminal utility functions
+- `ui-components.js` - Reusable UI components
+
+#### Screen Components (`lib/interactive/screens/`)
+- `base-screen.js` - Foundation screen class with lifecycle management
+- `type-selection-screen.js` - Storage type selection
+- `secret-selection-screen.js` - Secret browsing & selection
+- `key-browser-screen.js` - Key viewing/editing with copy
+- `copy-wizard-screen.js` - Multi-step copy wizard with inline text input
+- `text-input-screen.js` - Bordered text input with validation
+- `fuzzy-search-screen.js` - Reusable search interface
+- `kubernetes-namespace-screen.js` - Kubernetes namespace selection
+- `index.js` - Screen exports
+
+#### Utilities (`lib/utils/`)
+- `secrets.js` - Secret parsing/generation logic
 
 ## Key Features
 
@@ -263,10 +291,10 @@ Debug logs are saved to `./lowkey-logs/` in the current directory with timestamp
 
 ## Version and Dependencies
 
-- **Node.js**: >=16 required
+- **Node.js**: >=18 required
 - **AWS SDK**: `@aws-sdk/client-secrets-manager` v3
 - **No other external dependencies** - keeps it lightweight
-- **Current version**: 1.5.0 (check package.json)
+- **Current version**: 1.6.0 (check package.json)
 
 ## Package Structure
 
@@ -278,41 +306,55 @@ lowkey/
 │   ├── inspect.js
 │   ├── interactive.js
 │   └── list.js
-├── lib/                # Core libraries (enhanced 2025)
-│   ├── arg-parser.js   # Shared argument parsing utilities
-│   ├── aws.js          # AWS Secrets Manager operations
-│   ├── kubernetes.js   # Kubernetes secrets operations with namespace support
-│   ├── colors.js       # Terminal color utilities
-│   ├── constants.js    # Configuration constants
-│   ├── files.js        # Local file operations
-│   ├── interactive.js  # Interactive UI orchestration & legacy editor functions
-│   ├── key-handlers.js # Key event processing & reusable handler factories
-│   ├── renderer.js     # Screen rendering, throttling & pagination utilities
-│   ├── secrets.js      # Secret format handling and validation
-│   ├── terminal-manager.js # Terminal state management & screen stack
-│   ├── terminal-utils.js # Terminal utility functions
-│   ├── debug-logger.js # Debug logging system with timestamped file output
-│   └── screens/        # Screen-based UI components
-│       ├── index.js    # Screen exports
-│       ├── base-screen.js      # Foundation screen class
-│       ├── type-selection-screen.js    # Storage type selection
-│       ├── secret-selection-screen.js  # Secret browsing & selection
-│       ├── key-browser-screen.js       # Key viewing/editing with copy
-│       ├── copy-wizard-screen.js       # Multi-step copy wizard with inline text input
-│       ├── text-input-screen.js        # Bordered text input with validation
-│       ├── fuzzy-search-screen.js      # Reusable search interface
-│       └── kubernetes-namespace-screen.js # Kubernetes namespace selection
+├── lib/                # Core libraries (refactored 2025)
+│   ├── cli/            # CLI layer
+│   │   ├── arg-parser.js       # Common argument parsing utilities
+│   │   ├── command-handlers.js # Shared command logic
+│   │   └── command-parser.js   # Unified command parsing
+│   ├── core/           # Core systems
+│   │   ├── colors.js           # Terminal color utilities
+│   │   ├── config.js           # Centralized configuration management
+│   │   ├── constants.js        # Configuration constants
+│   │   ├── debug-logger.js     # Debug logging system
+│   │   └── error-handler.js    # Standardized error handling
+│   ├── interactive/    # Interactive system
+│   │   ├── interactive.js      # UI orchestration
+│   │   ├── key-handlers.js     # Key event processing
+│   │   ├── renderer.js         # Screen rendering & pagination
+│   │   ├── terminal-manager.js # Terminal state management
+│   │   ├── terminal-utils.js   # Terminal utility functions
+│   │   ├── ui-components.js    # Reusable UI components
+│   │   └── screens/            # Screen-based UI components
+│   │       ├── index.js        # Screen exports
+│   │       ├── base-screen.js          # Foundation screen class
+│   │       ├── type-selection-screen.js    # Storage type selection
+│   │       ├── secret-selection-screen.js  # Secret browsing & selection
+│   │       ├── key-browser-screen.js       # Key viewing/editing with copy
+│   │       ├── copy-wizard-screen.js       # Multi-step copy wizard
+│   │       ├── text-input-screen.js        # Bordered text input with validation
+│   │       ├── fuzzy-search-screen.js      # Reusable search interface
+│   │       └── kubernetes-namespace-screen.js # Kubernetes namespace selection
+│   ├── providers/      # Storage providers
+│   │   ├── aws.js              # AWS Secrets Manager operations
+│   │   ├── files.js            # Local file operations
+│   │   ├── kubernetes.js       # Kubernetes secrets operations
+│   │   └── secret-operations.js # Unified secret operations interface
+│   └── utils/          # Utilities
+│       └── secrets.js          # Secret format handling and validation
 ├── static/             # Assets
 │   └── lowkey.png
 └── package.json        # NPM configuration
 ```
 
-This **screen-based architecture** provides:
+This **layered architecture** provides:
+- **Clear separation of concerns**: CLI, core systems, providers, interactive, and utilities are isolated
 - **Modular UI components**: Each screen is self-contained with its own logic and rendering
 - **Centralized navigation**: TerminalManager handles screen stack and transitions  
 - **Reusable patterns**: Common UI patterns (text input, fuzzy search) are componentized
 - **Enhanced UX**: Rich interfaces like bordered text inputs and multi-step wizards
-- **Easy extension**: New screens can be added with minimal coupling to existing code
+- **Easy extension**: New screens and providers can be added with minimal coupling
+- **Unified command handling**: Shared logic between interactive and CLI modes
+- **Standardized configuration**: Environment variables and settings managed centrally
 
 ## Recent Major Features (2025)
 
@@ -578,61 +620,53 @@ The k3d cluster runs on port 6443 and is pre-configured for lowkey development a
 
 ## Planned Refactoring Initiatives (2025)
 
-### 1. **Command Handler Unification** 🚧 *IN PROGRESS*
+### 1. **Command Handler Unification** ✅ *COMPLETED*
 **Priority**: High  
 **Problem**: Interactive and non-interactive commands duplicate core logic
 - `commands/copy.js` and `lib/screens/copy-wizard-screen.js` both handle secret copying
 - `commands/list.js` and interactive screens both list secrets  
 - `commands/inspect.js` and interactive screens both inspect secrets
 
-**Solution**: Create shared command handlers in `lib/command-handlers.js`:
-```javascript
-class CommandHandlers {
-  static async copySecret(options) {
-    // Shared copy logic used by both copy.js and copy-wizard-screen.js
-  }
-  static async listSecrets(options) {
-    // Shared list logic used by both list.js and interactive screens
-  }
-}
-```
+**Solution**: ✅ **COMPLETED** - Created shared command handlers in `lib/cli/command-handlers.js` with unified logic for copy, list, and inspect operations used by both CLI and interactive modes.
 
-### 2. **Argument Parsing Consolidation** 📋 *PLANNED*
+### 2. **Argument Parsing Consolidation** ✅ *COMPLETED*
 **Priority**: High  
 **Problem**: Each command has similar argument parsing patterns with repeated validation logic
 
-**Solution**: Create generic command parser in `lib/command-parser.js` with command configuration objects.
+**Solution**: ✅ **COMPLETED** - Created unified command parser in `lib/cli/command-parser.js` with standardized configuration objects and validation.
 
-### 3. **Secret Operations Abstraction** 🔄 *PLANNED*
+### 3. **Secret Operations Abstraction** ✅ *COMPLETED*
 **Priority**: Medium  
 **Problem**: Secret fetching/uploading logic scattered across `secrets.js`, `aws.js`, `kubernetes.js`
 
-**Solution**: Unified secret operations interface in `lib/secret-operations.js` with provider abstraction.
+**Solution**: ✅ **COMPLETED** - Created unified secret operations interface in `lib/providers/secret-operations.js` with clean provider abstraction. All providers moved to `lib/providers/` directory.
 
-### 4. **Error Handling Standardization** ⚠️ *PLANNED*
+### 4. **Error Handling Standardization** ✅ *COMPLETED*
 **Priority**: Medium  
 **Problem**: Inconsistent error handling - some throw, others return error objects, different formatting
 
-**Solution**: Centralized error handling system in `lib/error-handler.js` with standardized formatting.
+**Solution**: ✅ **COMPLETED** - Created centralized error handling system in `lib/core/error-handler.js` with standardized formatting and user-friendly messages.
 
-### 5. **Configuration Management** ⚙️ *PLANNED*
+### 5. **Configuration Management** ✅ *COMPLETED*
 **Priority**: Low  
 **Problem**: Configuration scattered across config files, env vars, and hard-coded constants
 
-**Solution**: Centralized configuration management in `lib/config.js` with unified loading.
+**Solution**: ✅ **COMPLETED** - Created comprehensive configuration management in `lib/core/config.js` with environment variable validation, type checking, and unified loading.
 
-### 6. **Terminal UI Component Reuse** 🖥️ *PLANNED*
+### 6. **Terminal UI Component Reuse** ✅ *COMPLETED*
 **Priority**: Low  
 **Problem**: Interactive screens have duplicated UI logic and rendering patterns
 
-**Solution**: Reusable UI components in `lib/ui-components.js` for common patterns.
+**Solution**: ✅ **COMPLETED** - Created reusable UI components in `lib/interactive/ui-components.js` with common patterns like bordered inputs, pagination, and rendering utilities.
 
-## Benefits of Refactoring
-- **Reduced Duplication**: Shared logic between interactive and non-interactive modes
-- **Easier Maintenance**: Core logic changes only need to be made in one place
-- **Better Testing**: Shared functions can be tested once and reused
-- **Easier Extension**: Adding new commands or storage types becomes simpler
-- **Improved Reliability**: Standardized error handling and validation
+## Benefits of Refactoring ✅ **ACHIEVED**
+- **Reduced Duplication**: ✅ Shared logic between interactive and non-interactive modes
+- **Easier Maintenance**: ✅ Core logic changes only need to be made in one place
+- **Better Testing**: ✅ Shared functions can be tested once and reused
+- **Easier Extension**: ✅ Adding new commands or storage types becomes simpler
+- **Improved Reliability**: ✅ Standardized error handling and validation
+- **Clear Architecture**: ✅ Layered structure with separation of concerns
+- **Centralized Configuration**: ✅ All settings managed in one place
 
 ## Commit Message Style Guide
 
@@ -667,3 +701,4 @@ Add more tests
 - whenever i say "add and commit", i want you to add the updated files and commit using my standard commit messaging
 - remember that you can't run lowkey in interactive mode because it nees TTY
 - "test add commit" should use make test to make sure it tests localstack and k3d too
+- use a simpler oneliner for git commit messages
