@@ -25,7 +25,8 @@
       "Bash(npm test:*)",
       "Bash(git add:*)",
       "Bash(npm run test:unit:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebSearch"
     ],
     "deny": [],
     "additionalDirectories": [
