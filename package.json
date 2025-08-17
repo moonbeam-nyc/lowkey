@@ -40,6 +40,8 @@
   },
   "files": [
     "cli.js",
+    "commands/",
+    "lib/",
     "README.md",
     "LICENSE",
     "static/"
