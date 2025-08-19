@@ -55,20 +55,20 @@ describe('RenderUtils unit tests', () => {
     test('shows both indicators when items are hidden', () => {
       const indicators = RenderUtils.getPaginationIndicators(5, 15, 20);
       assert.strictEqual(indicators.length, 2, 'should show both indicators');
-      assert.ok(indicators[0].includes('previous'), 'should show previous indicator');
-      assert.ok(indicators[1].includes('more'), 'should show next indicator');
+      assert.ok(indicators[0].includes('above'), 'should show above indicator');
+      assert.ok(indicators[1].includes('below'), 'should show below indicator');
     });
 
     test('shows only next indicator at start', () => {
       const indicators = RenderUtils.getPaginationIndicators(0, 10, 20);
       assert.strictEqual(indicators.length, 1, 'should show only one indicator');
-      assert.ok(indicators[0].includes('more'), 'should show next indicator');
+      assert.ok(indicators[0].includes('below'), 'should show below indicator');
     });
 
     test('shows only previous indicator at end', () => {
       const indicators = RenderUtils.getPaginationIndicators(10, 20, 20);
       assert.strictEqual(indicators.length, 1, 'should show only one indicator');
-      assert.ok(indicators[0].includes('previous'), 'should show previous indicator');
+      assert.ok(indicators[0].includes('above'), 'should show above indicator');
     });
 
     test('shows no indicators when all items visible', () => {
