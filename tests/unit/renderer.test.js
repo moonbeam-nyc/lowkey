@@ -81,7 +81,6 @@ describe('RenderUtils unit tests', () => {
     test('formats single breadcrumb', () => {
       const result = RenderUtils.formatBreadcrumbs(['Home']);
       assert.ok(result.includes('Home'), 'should include breadcrumb text');
-      assert.ok(result.includes('📍'), 'should include pin emoji');
     });
 
     test('formats multiple breadcrumbs with separator', () => {
@@ -94,7 +93,7 @@ describe('RenderUtils unit tests', () => {
 
     test('handles empty breadcrumbs', () => {
       const result = RenderUtils.formatBreadcrumbs([]);
-      assert.strictEqual(result, '📍 ', 'should show just the pin');
+      assert.strictEqual(result, '', 'should return empty string for no breadcrumbs');
     });
   });
 

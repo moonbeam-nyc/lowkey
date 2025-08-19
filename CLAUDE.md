@@ -702,3 +702,4 @@ Add more tests
 - remember that you can't run lowkey in interactive mode because it nees TTY
 - "test add commit" should use make test to make sure it tests localstack and k3d too
 - use a simpler oneliner for git commit messages
+- we shouldn't use console.logs as debug logging, we have a debuglogger setup for that writes to a file as we go, you should use that when adding logs for debugging
