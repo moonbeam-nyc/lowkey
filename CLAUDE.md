@@ -77,22 +77,34 @@ The `lib/` directory is now organized into focused modules:
 #### Interactive Key Bindings
 - `↑↓` or `j/k` - Navigate items
 - `/` - Enter search mode (shows `█` cursor)
+- `Space` - **Multi-select keys** (toggle individual key selection)
 - `e` - Edit mode (only for env/json/AWS secrets)
-- `Ctrl+S` - **Copy secrets** (launches copy wizard from Key Browser)
+- `Ctrl+S` - **Copy secrets** (selected keys or all if none selected)
+- `Ctrl+D` - **Delete keys** (selected keys or current key)
 - `Ctrl+V` - Toggle value visibility
 - `Enter` - Select/confirm
-- `Esc` - Go back or exit search
+- `Esc` - Clear multi-selection, exit search, or go back
 - `Ctrl+C` - Exit application
 
+### Multi-Select Key Management (`Space` from Key Browser)
+- **Individual key selection** - Select specific keys with spacebar toggle
+- **Visual indicators** - Checkmark prefix shows selected keys
+- **Unified operations** - Both copy (Ctrl+S) and delete (Ctrl+D) respect selections
+- **Smart escape behavior** - Esc clears selections → exits search → goes back
+- **Selection state display** - Header shows "Selected: X keys" when active
+- **Copy behavior**: Selected keys OR all keys if none selected
+- **Delete behavior**: Selected keys OR current focused key if none selected
+
 ### Copy Wizard (`Ctrl+S` from Key Browser)
-- **Smart filtering** - Copies filtered keys if search is active, all keys otherwise
+- **Multi-select aware** - Copies selected keys or all keys if none selected
 - **Multi-step wizard** - Preview → Format Selection → File/Namespace Selection → Confirmation
-- **Context preservation** - Always shows keys being copied and current selections
+- **Merge behavior** - Adds new keys to existing files instead of overwriting
+- **Context preservation** - Shows exactly which keys will be copied
 - **Format support** - Export to .env, .json, or Kubernetes secrets
 - **Kubernetes integration** - Full namespace selection, secret listing, and inline secret creation
 - **File management** - Choose existing files or create new ones with guided naming
-- **Visual feedback** - Inline status updates (copying → success/error) without losing context
-- **Automatic backup** - Creates .bak files before overwriting existing files
+- **Visual feedback** - Clear explanation of merge behavior in confirmation
+- **Automatic backup** - Creates .bak files before modifying existing files
 - **Auto-navigation** - Automatically navigates to newly created secrets/files after successful copy
 
 ### Editing Features
@@ -179,7 +191,8 @@ The interactive system now uses a **screen-based architecture** with individual 
 ### File Operations
 - **Env files**: Regex parsing with quote handling and escape sequences
 - **JSON files**: Validation for flat object structure (no nested objects/arrays)
-- **Backup functionality**: Creates `.bak` files before overwriting
+- **Merge functionality**: New keys added to existing files, existing keys overwritten
+- **Backup functionality**: Creates `.bak` files before modifying existing files
 - **Smart exclusions**: Filters out standard config files (configurable via constants)
 
 ## Error Handling Strategy
@@ -358,15 +371,32 @@ This **layered architecture** provides:
 
 ## Recent Major Features (2025)
 
+### Multi-Select Key Management System
+- **Spacebar selection**: Toggle individual keys in Key Browser screen
+- **Visual indicators**: Checkmark prefix (✓) shows selected keys
+- **Unified operations**: Both copy (Ctrl+S) and delete (Ctrl+D) use same selection system
+- **Smart escape**: Esc clears selections → exits search → goes back
+- **Header feedback**: Shows "Selected: X keys" when in multi-select mode
+- **Atomic operations**: All operations (copy/delete) work on exact selection
+- **Merge behavior**: Copy operations add/overwrite keys instead of replacing files
+
+### Enhanced Copy System  
+- **Selection-aware**: Copies selected keys OR all keys if none selected
+- **File merging**: New keys added to existing files, preserving other content
+- **Visual confirmation**: Shows merge behavior explanation in confirmation screen
+- **Backup safety**: Creates .bak files before modifying existing files
+- **Success feedback**: Shows "merged X keys (Y total)" vs "wrote X keys"
+
 ### Delete Operations System
-- **Ctrl+D hotkey**: Delete any secret type from selection screen
-- **Type-to-confirm safety**: Must type secret name exactly to confirm
+- **Multi-select support**: Delete selected keys or current focused key
+- **Ctrl+D hotkey**: Delete keys from Key Browser or secrets from selection screens
+- **Type-to-confirm safety**: Must type confirmation text exactly
 - **Popup modal**: Overlay preserves context while confirming
 - **All secret types**: Supports env, json, AWS Secrets Manager, Kubernetes
-- **Clipboard support**: Ctrl+V (or Cmd+V on macOS) to paste secret name
+- **Clipboard support**: Ctrl+V (or Cmd+V on macOS) to paste confirmation text
 - **Visual feedback**: Progressive states (input → deleting → success)
 - **Error handling**: Clear messages for failed deletions
-- **Auto-refresh**: Secret list updates after successful deletion
+- **Auto-refresh**: Lists update after successful operations
 
 ### Popup System Architecture
 - **PopupManager**: Singleton manager for modal overlays
@@ -773,3 +803,4 @@ Add more tests
 - "test add commit" should use make test to make sure it tests localstack and k3d too
 - use a simpler oneliner for git commit messages
 - we shouldn't use console.logs as debug logging, we have a debuglogger setup for that writes to a file as we go, you should use that when adding logs for debugging
+- you put console logs, they should write to the debug logger
