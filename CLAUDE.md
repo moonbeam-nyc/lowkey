@@ -358,6 +358,46 @@ This **layered architecture** provides:
 
 ## Recent Major Features (2025)
 
+### Delete Operations System
+- **Ctrl+D hotkey**: Delete any secret type from selection screen
+- **Type-to-confirm safety**: Must type secret name exactly to confirm
+- **Popup modal**: Overlay preserves context while confirming
+- **All secret types**: Supports env, json, AWS Secrets Manager, Kubernetes
+- **Clipboard support**: Ctrl+V (or Cmd+V on macOS) to paste secret name
+- **Visual feedback**: Progressive states (input → deleting → success)
+- **Error handling**: Clear messages for failed deletions
+- **Auto-refresh**: Secret list updates after successful deletion
+
+### Popup System Architecture
+- **PopupManager**: Singleton manager for modal overlays
+- **BasePopup**: Foundation class for popup components
+- **Overlay rendering**: Intelligent content positioning with ANSI preservation
+- **Key routing**: Popup receives key events while preserving base screen
+- **Current popups**:
+  - Delete confirmation (Ctrl+D)
+  - AWS profile selector (Ctrl+A)
+
+### Declarative Component System
+- **40+ UI Components**: Text, Title, List, Box, Modal, Table, ProgressBar, etc.
+- **Factory functions**: Consistent API across all components
+- **Zone-based rendering**: Header, body, footer zones
+- **ComponentScreen**: Base class for declarative screens
+- **Automatic features**: Pagination, scrolling, truncation
+- **Component examples**:
+  ```javascript
+  Title('Select a secret'),
+  List(items, selectedIndex, { paginate: true }),
+  InstructionsFromOptions({ hasSearch: true, hasDelete: true })
+  ```
+
+### AWS Profile Management (Ctrl+A)
+- **Global popup**: Available from any screen
+- **Three modes**: Compact → profile-list → region-list
+- **Real-time switching**: Updates AWS configuration immediately
+- **Visual indicators**: Shows current profile/region in header
+- **Search functionality**: Filter profiles and regions
+- **Environment persistence**: Updates AWS_PROFILE and AWS_REGION
+
 ### Copy Wizard System
 - **Ctrl+S hotkey**: Accessible from Key Browser screen
 - **Context-aware copying**: Respects current search filters
@@ -541,6 +581,36 @@ node --test --experimental-test-coverage \
   --test-coverage-functions=80 \
   tests/**/*.test.js
 ```
+
+## Best Practices & Patterns
+
+### Popup Development Pattern
+When creating a new popup:
+1. Extend `BasePopup` class
+2. Implement `render()` to return string content
+3. Implement `handleKey()` for input handling
+4. Use `PopupManager.showPopup()` to display
+5. Consider multi-character paste handling for text input
+
+### Component Screen Pattern
+For new declarative screens:
+1. Extend `ComponentScreen` class
+2. Override `getComponents()` to return component array
+3. Use factory functions from `component-system.js`
+4. Let the renderer handle layout and pagination
+5. Keep business logic separate from rendering
+
+### File Exclusion Pattern
+When listing files:
+1. Use `listJsonFiles()` and `listEnvFiles()` from `files.js`
+2. These automatically exclude system files (package.json, etc.)
+3. Exclusion list is configurable in `constants.js`
+
+### Cross-Platform Considerations
+- **Clipboard**: Use pbpaste (macOS) / xclip (Linux)
+- **Key bindings**: Show Cmd+V on macOS, Ctrl+V elsewhere
+- **Terminal detection**: Handle both iTerm2 and standard terminals
+- **Paste handling**: Multi-character input comes as single event on macOS
 
 ## Testing Guidelines
 
