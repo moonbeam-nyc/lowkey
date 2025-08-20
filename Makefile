@@ -222,7 +222,7 @@ debug-run: ## Run lowkey in debug mode with logging
 
 .PHONY: debug-interactive
 debug-interactive: ## Run interactive mode with debug logging
-	LOWKEY_DEBUG=true node cli.js interactive
+	LOWKEY_DEBUG=true LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_REGION=us-east-1 node cli.js interactive
 
 .PHONY: log
 log: ## View the latest debug log

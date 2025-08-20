@@ -71,6 +71,7 @@ async function handleCopyCommand(options) {
     outputName: options.outputName,
     region: options.region,
     namespace: options.namespace,
+    outputNamespace: options.outputNamespace, // Pass through outputNamespace if provided
     stage: options.stage,
     autoYes: options.autoYes,
     onProgress: (message) => {
