@@ -93,13 +93,17 @@ docker-test-all: docker-build docker-run docker-run-version docker-run-help ## R
 
 # Cleanup commands
 .PHONY: docker-clean
-docker-clean: ## Remove locally built images
+docker-clean: ## Remove locally built Docker images
 	docker rmi $(IMAGE_NAME):$(IMAGE_TAG) 2>/dev/null || true
 	docker rmi $(FULL_IMAGE) 2>/dev/null || true
 
 .PHONY: docker-clean-all
-docker-clean-all: docker-clean ## Remove all related Docker images and containers
+docker-clean-all: docker-clean ## Remove all Docker images and containers
 	docker system prune -f
+
+.PHONY: clean-all
+clean-all: docker-clean-all k3d-clean localstack-clean log-clean ## Clean everything: Docker, k3d, LocalStack, and logs
+	@echo "✅ All environments and resources cleaned up"
 
 # Development commands
 .PHONY: dev-install
@@ -204,7 +208,8 @@ k3d-status: ## Show status of k3d clusters
 	@kubectl config current-context
 
 .PHONY: k3d-clean
-k3d-clean: k3d-delete ## Clean up k3d cluster and all resources
+k3d-clean: ## Clean up k3d cluster and all resources (safe to run even if cluster doesn't exist)
+	@k3d cluster delete lowkey-test 2>/dev/null || true
 	@echo "✅ k3d cluster and resources cleaned up"
 
 .PHONY: k3d-restart
@@ -357,9 +362,9 @@ localstack-status: ## Check LocalStack health status
 	@curl -s http://localhost:4566/_localstack/health | jq . 2>/dev/null || curl -s http://localhost:4566/_localstack/health
 
 .PHONY: localstack-clean
-localstack-clean: localstack-stop ## Stop LocalStack and clean up volumes
-	docker compose -f docker-compose.localstack.yml down -v
-	rm -rf tmp/localstack
+localstack-clean: ## Stop LocalStack and clean up volumes (safe to run even if not running)
+	@docker compose -f docker-compose.localstack.yml down -v 2>/dev/null || true
+	@rm -rf tmp/localstack 2>/dev/null || true
 	@echo "✅ LocalStack cleaned up"
 
 .PHONY: localstack-test-setup
