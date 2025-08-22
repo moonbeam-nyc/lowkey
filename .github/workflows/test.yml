@@ -173,5 +173,5 @@ jobs:
     - name: Test Docker build
       run: |
         echo "🐳 Testing Docker build..."
-        make build
-        make run ARGS="--version"
+        make docker-build
+        make docker-run-version

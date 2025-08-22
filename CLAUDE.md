@@ -77,22 +77,34 @@ The `lib/` directory is now organized into focused modules:
 #### Interactive Key Bindings
 - `↑↓` or `j/k` - Navigate items
 - `/` - Enter search mode (shows `█` cursor)
+- `Space` - **Multi-select keys** (toggle individual key selection)
 - `e` - Edit mode (only for env/json/AWS secrets)
-- `Ctrl+S` - **Copy secrets** (launches copy wizard from Key Browser)
+- `Ctrl+S` - **Copy secrets** (selected keys or all if none selected)
+- `Ctrl+D` - **Delete keys** (selected keys or current key)
 - `Ctrl+V` - Toggle value visibility
 - `Enter` - Select/confirm
-- `Esc` - Go back or exit search
+- `Esc` - Clear multi-selection, exit search, or go back
 - `Ctrl+C` - Exit application
 
+### Multi-Select Key Management (`Space` from Key Browser)
+- **Individual key selection** - Select specific keys with spacebar toggle
+- **Visual indicators** - Checkmark prefix shows selected keys
+- **Unified operations** - Both copy (Ctrl+S) and delete (Ctrl+D) respect selections
+- **Smart escape behavior** - Esc clears selections → exits search → goes back
+- **Selection state display** - Header shows "Selected: X keys" when active
+- **Copy behavior**: Selected keys OR all keys if none selected
+- **Delete behavior**: Selected keys OR current focused key if none selected
+
 ### Copy Wizard (`Ctrl+S` from Key Browser)
-- **Smart filtering** - Copies filtered keys if search is active, all keys otherwise
+- **Multi-select aware** - Copies selected keys or all keys if none selected
 - **Multi-step wizard** - Preview → Format Selection → File/Namespace Selection → Confirmation
-- **Context preservation** - Always shows keys being copied and current selections
+- **Merge behavior** - Adds new keys to existing files instead of overwriting
+- **Context preservation** - Shows exactly which keys will be copied
 - **Format support** - Export to .env, .json, or Kubernetes secrets
 - **Kubernetes integration** - Full namespace selection, secret listing, and inline secret creation
 - **File management** - Choose existing files or create new ones with guided naming
-- **Visual feedback** - Inline status updates (copying → success/error) without losing context
-- **Automatic backup** - Creates .bak files before overwriting existing files
+- **Visual feedback** - Clear explanation of merge behavior in confirmation
+- **Automatic backup** - Creates .bak files before modifying existing files
 - **Auto-navigation** - Automatically navigates to newly created secrets/files after successful copy
 
 ### Editing Features
@@ -179,7 +191,8 @@ The interactive system now uses a **screen-based architecture** with individual 
 ### File Operations
 - **Env files**: Regex parsing with quote handling and escape sequences
 - **JSON files**: Validation for flat object structure (no nested objects/arrays)
-- **Backup functionality**: Creates `.bak` files before overwriting
+- **Merge functionality**: New keys added to existing files, existing keys overwritten
+- **Backup functionality**: Creates `.bak` files before modifying existing files
 - **Smart exclusions**: Filters out standard config files (configurable via constants)
 
 ## Error Handling Strategy
@@ -357,6 +370,63 @@ This **layered architecture** provides:
 - **Standardized configuration**: Environment variables and settings managed centrally
 
 ## Recent Major Features (2025)
+
+### Multi-Select Key Management System
+- **Spacebar selection**: Toggle individual keys in Key Browser screen
+- **Visual indicators**: Checkmark prefix (✓) shows selected keys
+- **Unified operations**: Both copy (Ctrl+S) and delete (Ctrl+D) use same selection system
+- **Smart escape**: Esc clears selections → exits search → goes back
+- **Header feedback**: Shows "Selected: X keys" when in multi-select mode
+- **Atomic operations**: All operations (copy/delete) work on exact selection
+- **Merge behavior**: Copy operations add/overwrite keys instead of replacing files
+
+### Enhanced Copy System  
+- **Selection-aware**: Copies selected keys OR all keys if none selected
+- **File merging**: New keys added to existing files, preserving other content
+- **Visual confirmation**: Shows merge behavior explanation in confirmation screen
+- **Backup safety**: Creates .bak files before modifying existing files
+- **Success feedback**: Shows "merged X keys (Y total)" vs "wrote X keys"
+
+### Delete Operations System
+- **Multi-select support**: Delete selected keys or current focused key
+- **Ctrl+D hotkey**: Delete keys from Key Browser or secrets from selection screens
+- **Type-to-confirm safety**: Must type confirmation text exactly
+- **Popup modal**: Overlay preserves context while confirming
+- **All secret types**: Supports env, json, AWS Secrets Manager, Kubernetes
+- **Clipboard support**: Ctrl+V (or Cmd+V on macOS) to paste confirmation text
+- **Visual feedback**: Progressive states (input → deleting → success)
+- **Error handling**: Clear messages for failed deletions
+- **Auto-refresh**: Lists update after successful operations
+
+### Popup System Architecture
+- **PopupManager**: Singleton manager for modal overlays
+- **BasePopup**: Foundation class for popup components
+- **Overlay rendering**: Intelligent content positioning with ANSI preservation
+- **Key routing**: Popup receives key events while preserving base screen
+- **Current popups**:
+  - Delete confirmation (Ctrl+D)
+  - AWS profile selector (Ctrl+A)
+
+### Declarative Component System
+- **40+ UI Components**: Text, Title, List, Box, Modal, Table, ProgressBar, etc.
+- **Factory functions**: Consistent API across all components
+- **Zone-based rendering**: Header, body, footer zones
+- **ComponentScreen**: Base class for declarative screens
+- **Automatic features**: Pagination, scrolling, truncation
+- **Component examples**:
+  ```javascript
+  Title('Select a secret'),
+  List(items, selectedIndex, { paginate: true }),
+  InstructionsFromOptions({ hasSearch: true, hasDelete: true })
+  ```
+
+### AWS Profile Management (Ctrl+A)
+- **Global popup**: Available from any screen
+- **Three modes**: Compact → profile-list → region-list
+- **Real-time switching**: Updates AWS configuration immediately
+- **Visual indicators**: Shows current profile/region in header
+- **Search functionality**: Filter profiles and regions
+- **Environment persistence**: Updates AWS_PROFILE and AWS_REGION
 
 ### Copy Wizard System
 - **Ctrl+S hotkey**: Accessible from Key Browser screen
@@ -542,6 +612,36 @@ node --test --experimental-test-coverage \
   tests/**/*.test.js
 ```
 
+## Best Practices & Patterns
+
+### Popup Development Pattern
+When creating a new popup:
+1. Extend `BasePopup` class
+2. Implement `render()` to return string content
+3. Implement `handleKey()` for input handling
+4. Use `PopupManager.showPopup()` to display
+5. Consider multi-character paste handling for text input
+
+### Component Screen Pattern
+For new declarative screens:
+1. Extend `ComponentScreen` class
+2. Override `getComponents()` to return component array
+3. Use factory functions from `component-system.js`
+4. Let the renderer handle layout and pagination
+5. Keep business logic separate from rendering
+
+### File Exclusion Pattern
+When listing files:
+1. Use `listJsonFiles()` and `listEnvFiles()` from `files.js`
+2. These automatically exclude system files (package.json, etc.)
+3. Exclusion list is configurable in `constants.js`
+
+### Cross-Platform Considerations
+- **Clipboard**: Use pbpaste (macOS) / xclip (Linux)
+- **Key bindings**: Show Cmd+V on macOS, Ctrl+V elsewhere
+- **Terminal detection**: Handle both iTerm2 and standard terminals
+- **Paste handling**: Multi-character input comes as single event on macOS
+
 ## Testing Guidelines
 
 ### When to Add Tests
@@ -702,3 +802,5 @@ Add more tests
 - remember that you can't run lowkey in interactive mode because it nees TTY
 - "test add commit" should use make test to make sure it tests localstack and k3d too
 - use a simpler oneliner for git commit messages
+- we shouldn't use console.logs as debug logging, we have a debuglogger setup for that writes to a file as we go, you should use that when adding logs for debugging
+- you put console logs, they should write to the debug logger

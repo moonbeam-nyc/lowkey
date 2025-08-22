@@ -71,8 +71,11 @@ async function handleCopyCommand(options) {
     outputName: options.outputName,
     region: options.region,
     namespace: options.namespace,
+    outputNamespace: options.outputNamespace, // Pass through outputNamespace if provided
     stage: options.stage,
     autoYes: options.autoYes,
+    secretData: options.secretData, // Pass through pre-fetched secret data for interactive mode
+    filteredKeys: options.filteredKeys, // Pass through filtered keys for selective copying
     onProgress: (message) => {
       // Send progress messages to stderr so they don't interfere with stdout output
       console.error(colorize(message, 'gray'));

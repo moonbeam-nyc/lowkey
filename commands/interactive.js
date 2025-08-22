@@ -54,6 +54,7 @@ async function handleInteractiveCommand(options, searchState = {}) {
     console.error(colorize('This command cannot be run in piped or non-interactive contexts', 'yellow'));
     process.exit(1);
   }
+
   
   try {
     const terminalManager = TerminalManager.getInstance();

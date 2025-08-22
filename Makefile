@@ -13,34 +13,34 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 # Docker build commands
-.PHONY: build
-build: ## Build Docker image locally
+.PHONY: docker-build
+docker-build: ## Build Docker image locally
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
 
-.PHONY: build-full
-build-full: ## Build Docker image with full registry path
+.PHONY: docker-build-full
+docker-build-full: ## Build Docker image with full registry path
 	docker build -t $(FULL_IMAGE) .
 
 # Docker run commands
-.PHONY: run
-run: ## Run Docker container with help command
+.PHONY: docker-run
+docker-run: ## Run Docker container with help command
 	docker run --rm $(IMAGE_NAME):$(IMAGE_TAG)
 
-.PHONY: run-version
-run-version: ## Show version using Docker container
+.PHONY: docker-run-version
+docker-run-version: ## Show version using Docker container
 	docker run --rm $(IMAGE_NAME):$(IMAGE_TAG) --version
 
-.PHONY: run-help
-run-help: ## Show help using Docker container
+.PHONY: docker-run-help
+docker-run-help: ## Show help using Docker container
 	docker run --rm $(IMAGE_NAME):$(IMAGE_TAG) --help
 
 # Interactive development commands
-.PHONY: run-shell
-run-shell: ## Run container with shell for debugging
+.PHONY: docker-run-shell
+docker-run-shell: ## Run container with shell for debugging
 	docker run --rm -it --entrypoint /bin/sh $(IMAGE_NAME):$(IMAGE_TAG)
 
-.PHONY: run-aws
-run-aws: ## Run container with AWS environment variables mounted
+.PHONY: docker-run-aws
+docker-run-aws: ## Run container with AWS environment variables mounted
 	docker run --rm \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
@@ -50,29 +50,29 @@ run-aws: ## Run container with AWS environment variables mounted
 		$(IMAGE_NAME):$(IMAGE_TAG) $(ARGS)
 
 # Example usage commands
-.PHONY: example-copy-env
-example-copy-env: ## Example: Copy secrets to env format (requires AWS credentials)
-	$(MAKE) run-aws ARGS="copy --input-type aws-secrets-manager --input-name example-secret --output-type env"
+.PHONY: docker-example-copy-env
+docker-example-copy-env: ## Example: Copy secrets to env format (requires AWS credentials)
+	$(MAKE) docker-run-aws ARGS="copy --input-type aws-secrets-manager --input-name example-secret --output-type env"
 
-.PHONY: example-copy-json
-example-copy-json: ## Example: Copy secrets to JSON format (requires AWS credentials)
-	$(MAKE) run-aws ARGS="copy --input-type aws-secrets-manager --input-name example-secret --output-type json"
+.PHONY: docker-example-copy-json
+docker-example-copy-json: ## Example: Copy secrets to JSON format (requires AWS credentials)
+	$(MAKE) docker-run-aws ARGS="copy --input-type aws-secrets-manager --input-name example-secret --output-type json"
 
-.PHONY: example-list-aws
-example-list-aws: ## Example: List AWS secrets (requires AWS credentials)
-	$(MAKE) run-aws ARGS="list --type aws-secrets-manager --region us-east-1"
+.PHONY: docker-example-list-aws
+docker-example-list-aws: ## Example: List AWS secrets (requires AWS credentials)
+	$(MAKE) docker-run-aws ARGS="list --type aws-secrets-manager --region us-east-1"
 
-.PHONY: example-list-env
-example-list-env: ## Example: List .env files in current directory
+.PHONY: docker-example-list-env
+docker-example-list-env: ## Example: List .env files in current directory
 	docker run --rm -v $(PWD):/workspace $(IMAGE_NAME):$(IMAGE_TAG) list --type env --path /workspace
 
-.PHONY: example-list-json
-example-list-json: ## Example: List JSON files in current directory
+.PHONY: docker-example-list-json
+docker-example-list-json: ## Example: List JSON files in current directory
 	docker run --rm -v $(PWD):/workspace $(IMAGE_NAME):$(IMAGE_TAG) list --type json --path /workspace
 
 # File output commands
-.PHONY: run-output
-run-output: ## Run container with volume mount for file output
+.PHONY: docker-run-output
+docker-run-output: ## Run container with volume mount for file output
 	docker run --rm \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
@@ -83,23 +83,27 @@ run-output: ## Run container with volume mount for file output
 		$(IMAGE_NAME):$(IMAGE_TAG) $(ARGS)
 
 # Testing commands
-.PHONY: test-build
-test-build: build run-version ## Build and test that the container works
+.PHONY: docker-test-build
+docker-test-build: docker-build docker-run-version ## Build and test that the container works
 	@echo "✅ Docker build and basic functionality test passed"
 
-.PHONY: test-all
-test-all: build run run-version run-help ## Run all basic tests
+.PHONY: docker-test-all
+docker-test-all: docker-build docker-run docker-run-version docker-run-help ## Run all basic tests
 	@echo "✅ All basic tests passed"
 
 # Cleanup commands
-.PHONY: clean
-clean: ## Remove locally built images
+.PHONY: docker-clean
+docker-clean: ## Remove locally built Docker images
 	docker rmi $(IMAGE_NAME):$(IMAGE_TAG) 2>/dev/null || true
 	docker rmi $(FULL_IMAGE) 2>/dev/null || true
 
-.PHONY: clean-all
-clean-all: clean ## Remove all related Docker images and containers
+.PHONY: docker-clean-all
+docker-clean-all: docker-clean ## Remove all Docker images and containers
 	docker system prune -f
+
+.PHONY: clean-all
+clean-all: docker-clean-all k3d-clean localstack-clean log-clean ## Clean everything: Docker, k3d, LocalStack, and logs
+	@echo "✅ All environments and resources cleaned up"
 
 # Development commands
 .PHONY: dev-install
@@ -204,7 +208,8 @@ k3d-status: ## Show status of k3d clusters
 	@kubectl config current-context
 
 .PHONY: k3d-clean
-k3d-clean: k3d-delete ## Clean up k3d cluster and all resources
+k3d-clean: ## Clean up k3d cluster and all resources (safe to run even if cluster doesn't exist)
+	@k3d cluster delete lowkey-test 2>/dev/null || true
 	@echo "✅ k3d cluster and resources cleaned up"
 
 .PHONY: k3d-restart
@@ -222,7 +227,7 @@ debug-run: ## Run lowkey in debug mode with logging
 
 .PHONY: debug-interactive
 debug-interactive: ## Run interactive mode with debug logging
-	LOWKEY_DEBUG=true node cli.js interactive
+	LOWKEY_DEBUG=true LOCALSTACK_ENDPOINT=http://localhost:4566 AWS_REGION=us-east-1 node cli.js interactive
 
 .PHONY: log
 log: ## View the latest debug log
@@ -357,9 +362,9 @@ localstack-status: ## Check LocalStack health status
 	@curl -s http://localhost:4566/_localstack/health | jq . 2>/dev/null || curl -s http://localhost:4566/_localstack/health
 
 .PHONY: localstack-clean
-localstack-clean: localstack-stop ## Stop LocalStack and clean up volumes
-	docker compose -f docker-compose.localstack.yml down -v
-	rm -rf tmp/localstack
+localstack-clean: ## Stop LocalStack and clean up volumes (safe to run even if not running)
+	@docker compose -f docker-compose.localstack.yml down -v 2>/dev/null || true
+	@rm -rf tmp/localstack 2>/dev/null || true
 	@echo "✅ LocalStack cleaned up"
 
 .PHONY: localstack-test-setup
